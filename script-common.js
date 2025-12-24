@@ -2,15 +2,14 @@
 const dbURL = "https://absen-sisingamangaraja-default-rtdb.asia-southeast1.firebasedatabase.app/absensi.json";
 
 // 2. FUNGSI AMBIL DATA (ONLINE)
-async function getLogs() {
+async function getStudents() {
     try {
-        const response = await fetch(dbURL);
-        const data = await response.json();
-        // Firebase menyimpan data dalam bentuk objek, kita ubah ke Array
+        const res = await fetch("https://absen-sisingamangaraja-default-rtdb.asia-southeast1.firebasedatabase.app/master_siswa.json");
+        const data = await res.json();
         return data ? Object.values(data) : [];
     } catch (e) {
-        console.error("Gagal mengambil data online:", e);
-        return []; 
+        console.error("Gagal ambil data siswa:", e);
+        return [];
     }
 }
 
@@ -85,5 +84,6 @@ function sendNotificationWA(name, status, phone) {
     console.log("Kirim WA ke: " + phone);
 
 }
+
 
 
