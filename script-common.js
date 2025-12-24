@@ -1,5 +1,5 @@
 // 1. PENGATURAN DATABASE (Dapatkan URL ini dari Firebase Console)
-const dbURL = "https://absensi-smp-sisingamangaraja-default-rtdb.asia-southeast1.firebasedatabase.app/";
+const dbURL = "https://absen-sisingamangaraja-default-rtdb.asia-southeast1.firebasedatabase.app/absensi.json";
 
 // 2. FUNGSI AMBIL DATA (ONLINE)
 async function getLogs() {
@@ -83,4 +83,5 @@ function sendNotificationWA(name, status, phone) {
     const msg = encodeURIComponent(`Info Absensi SMP Sisingamangaraja\nNama: *${name}*\nStatus: *${status}*`);
     const url = `https://wa.me/${phone}?text=${msg}`;
     console.log("Kirim WA ke: " + phone);
+
 }
