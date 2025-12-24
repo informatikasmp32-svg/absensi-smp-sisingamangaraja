@@ -71,54 +71,43 @@ async function importX(el) {
 // 5. FUNGSI SIMPAN ABSENSI (LOGIKA 3 STATUS: TEPAT, TERLAMBAT, PULANG)
 async function saveAttendanceAuto(siswa, statusManual = null) {
     const sekarang = new Date();
-    // Mengambil jam dalam format angka (0-23)
-    const jamAngka = sekarang.getHours(); 
-    // Mengambil menit untuk keperluan log (opsional)
-    const jamMenit = sekarang.getHours().toString().padStart(2, '0') + ":" + 
-                     sekarang.getMinutes().toString().padStart(2, '0');
+    const jamMenit = sekarang.toLocaleTimeString('id-ID', {hour12:false, hour:'2-digit', minute:'2-digit'});
+    const jamAngka = sekarang.getHours();
     
+    // Penentuan Status Otomatis jika tidak dikirim manual
     let status = statusManual;
-    
     if (!status) {
-        // 1. PRIORITAS UTAMA: Jika sudah jam 12:00 ke atas, status WAJIB "PULANG"
         if (jamAngka >= 12) {
             status = "PULANG";
-        } 
-        // 2. Jika masih sebelum jam 12:00, baru cek Tepat Waktu atau Terlambat
-        else {
-            const config = getConfig(); // Mengambil jamMasuk (misal "07:30")
-            if (jamMenit <= config.jamMasuk) {
-                status = "TEPAT WAKTU";
-            } else {
-                status = "TERLAMBAT";
-            }
+        } else if (jamMenit <= getConfig().jamMasuk) {
+            status = "TEPAT WAKTU";
+        } else {
+            status = "TERLAMBAT";
         }
     }
 
-    // Lanjutkan proses simpan data...
     const logData = {
         id: siswa.id,
         name: siswa.name,
         kelas: siswa.kelas,
-        mode: status, // Status yang sudah diperbaiki
+        mode: status,
         timestamp: sekarang.toISOString(),
         waParent: siswa.wa || ""
     };
 
     try {
+        // Simpan ke Firebase (POST agar menambah data baru)
         await fetch(`${dbRootURL}absensi.json`, {
             method: 'POST',
             body: JSON.stringify(logData)
         });
-        
-        // Panggil fungsi kirim WA jika diperlukan
-        if (typeof kirimWA === "function") {
-            kirimWA(siswa.name, status, jamMenit, siswa.wa);
-        }
+
+        // Pemicu Kirim WhatsApp
+        kirimWA(siswa.name, status, jamMenit, siswa.wa);
 
         return { success: true, mode: status };
     } catch (error) {
-        console.error("Gagal simpan:", error);
+        console.error("Gagal simpan absensi ke Cloud:", error);
         return { success: false };
     }
 }
@@ -187,5 +176,3 @@ async function delL(timestamp) {
         location.reload();
     }
 }
-
-
