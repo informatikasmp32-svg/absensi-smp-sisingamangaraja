@@ -135,3 +135,6 @@ th:nth-child(4), td:nth-child(4) { width: 80px; }  /* Kelas */
     object-fit: cover;
     border-radius: 4px;
 }
+.hidden { display: none !important; }
+.status-ok { background-color: #27ae60; color: white; }
+.status-late { background-color: #e74c3c; color: white; }
