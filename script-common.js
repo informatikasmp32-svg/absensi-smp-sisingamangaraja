@@ -59,7 +59,41 @@ async function importX(el) {
     };
     reader.readAsArrayBuffer(el.files[0]);
 }
+// Tambahkan fungsi ini ke dalam script-common.js
+async function importX(el) {
+    if (!el.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const json = XLSX.utils.sheet_to_json(sheet);
+            
+            // Format data sesuai struktur Firebase Anda
+            const formatted = json.map(r => ({
+                id: String(r.ID || r.id || r.NIS || ""),
+                name: String(r.Nama || r.nama || ""),
+                kelas: String(r.Kelas || r.kelas || "-"),
+                wa: String(r.WA || "")
+            })).filter(item => item.id !== "");
 
+            // Simpan ke Firebase (Ganti URL dengan URL database Anda)
+            const dbURL = "https://absen-sisingamangaraja-default-rtdb.asia-southeast1.firebasedatabase.app/master_siswa.json";
+            await fetch(dbURL, {
+                method: 'PUT',
+                body: JSON.stringify(formatted)
+            });
+
+            alert(`Berhasil mengimpor ${formatted.length} siswa!`);
+            location.reload();
+        } catch (error) {
+            alert("Gagal membaca file Excel. Pastikan format benar.");
+            console.error(error);
+        }
+    };
+    reader.readAsArrayBuffer(el.files[0]);
+}
 // 5. FUNGSI SIMPAN ABSENSI (ONLINE)
 async function saveAttendanceAuto(id) {
     const now = new Date();
@@ -128,3 +162,4 @@ function sendNotificationWA(name, status, phone) {
     const url = `https://wa.me/${phone}?text=${msg}`;
     console.log("Kirim WA ke: " + phone);
 }
+
