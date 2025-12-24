@@ -71,7 +71,7 @@ async function importX(el) {
 // 5. FUNGSI SIMPAN ABSENSI (LOGIKA 3 STATUS: TEPAT, TERLAMBAT, PULANG)
 async function saveAttendanceAuto(siswa, statusManual = null) {
     const sekarang = new Date();
-    const jamMenit = sekarang.toLocaleTimeString('id-ID', {hour12:false, hour:'2-digit', minute:'2-digit'});
+    const jamMenit = sekarang.toLocaleTimeString('id-ID', {hour24:false, hour:'2-digit', minute:'2-digit'});
     const jamAngka = sekarang.getHours();
     
     // Penentuan Status Otomatis jika tidak dikirim manual
@@ -176,3 +176,4 @@ async function delL(timestamp) {
         location.reload();
     }
 }
+
