@@ -1,129 +1,98 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <title>Absensi SMP Sisingamangaraja</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="icon" type="image/png" href="img/logo87.PNG">
-    <script src="wa-service.js"></script>
-    <script src="script-common.js"></script>
-</head>
-<body class="bg-dashboard">
-    <div class="main-wrapper">
-        <div class="clock-section">
-            <h1 id="big-clock">00:00</h1>
-            <div id="big-date">...</div>
-            <p>SMP SWASTA SISINGAMANGARAJA</p>
-        </div>
-        <div class="scan-panel">
-            <div style="display:flex; align-items:center; gap:15px; margin-bottom:20px;">
-                <img src="img/logo87.PNG" width="100" onerror="this.src='https://via.placeholder.com/100?text=LOGO'">
-                <h2 style="margin:0; text-align:left;">SISTEM ABSENSI DIGITAL<br>
-                    SISINGAMANGARAJA TANJUNGBALAI
-                </h2>
-            </div>
-            
-            <div id="idle-view">
-                <img src="https://cdn.dribbble.com/userupload/41911399/file/original-be740e6ab542196db650de750341b1c9.gif" width="300" style="opacity:0.5;">
-                <h3 style="color:#2b00ff;">SILAKAN SCAN KARTU</h3>
-            </div>
+<script>
+    // 1. Update Jam dan Tanggal
+    function updateTime() {
+        const n = new Date();
+        document.getElementById('big-clock').innerText = n.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
+        document.getElementById('big-date').innerText = n.toLocaleDateString('id-ID', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+    }
+    setInterval(updateTime, 1000); 
+    updateTime();
 
-            <div id="student-view" class="hidden">
-                <div style="display:grid; grid-template-columns:150px 1fr; text-align:left; gap:20px; align-items:center;">
-                    <img id="p-img" src="" 
-                         style="width:150px; height:180px; object-fit:cover; border-radius:10px; border:3px solid #3498db;">
-                    <div>
-                        <h2 id="p-name" style="margin:0; color:#2c3e50; font-size: 24px;">-</h2>
-                        <p style="margin: 5px 0;">ID: <b id="p-id">-</b> | Kelas: <b id="p-class">-</b></p>
-                        <div id="p-status" class="status-pill">STATUS</div>
-                    </div>
-                </div>
-            </div>
-
-            <input type="text" id="barcode-input" autofocus style="position: absolute; opacity: 0;">
-        </div>
-    </div>
-
-    <script>
-        // 1. Update Jam dan Tanggal
-        function updateTime() {
-            const n = new Date();
-            document.getElementById('big-clock').innerText = n.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
-            document.getElementById('big-date').innerText = n.toLocaleDateString('id-ID', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+    // 2. Fokus Otomatis
+    document.addEventListener('click', () => document.getElementById('barcode-input').focus());
+    
+    // 3. Logika Scan
+    document.getElementById('barcode-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            const val = e.target.value.trim();
+            if (val !== "") showDisplay(val);
+            e.target.value = '';
         }
-        setInterval(updateTime, 1000); 
-        updateTime();
+    });
 
-        // 2. Fokus Otomatis
-        document.addEventListener('click', () => document.getElementById('barcode-input').focus());
-        
-        // 3. Logika Scan
-        document.getElementById('barcode-input').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                const val = e.target.value.trim();
-                if (val !== "") showDisplay(val);
-                e.target.value = '';
-            }
-        });
+    // 4. Fungsi Menampilkan Data & Simpan Absensi
+    async function showDisplay(id) {
+        try {
+            const students = await getStudents();
+            const s = students.find(item => String(item.id) === String(id).trim());
 
-        // 4. Fungsi Menampilkan Data & Simpan Absensi
-        async function showDisplay(id) {
-            try {
-                const students = await getStudents();
-                const s = students.find(item => String(item.id) === String(id).trim());
+            // Ganti Tampilan ke Student View
+            document.getElementById('idle-view').classList.add('hidden');
+            document.getElementById('student-view').classList.remove('hidden');
 
-                // Ganti Tampilan ke Student View
-                document.getElementById('idle-view').classList.add('hidden');
-                document.getElementById('student-view').classList.remove('hidden');
+            const photoEl = document.getElementById('p-img');
+            const statusEl = document.getElementById('p-status');
 
-                const photoEl = document.getElementById('p-img');
-                const statusEl = document.getElementById('p-status');
+            if (s) {
+                // Isi Data Siswa
+                document.getElementById('p-name').innerText = s.name;
+                document.getElementById('p-id').innerText = s.id;
+                document.getElementById('p-class').innerText = s.kelas;
+                
+                // Logika Foto
+                photoEl.src = `img/siswa/${s.id}.jpg`;
+                photoEl.onerror = function() {
+                    this.onerror = null; 
+                    this.src = `img/siswa/${s.id}.png`;
+                    this.setAttribute('onerror', "this.src='https://via.placeholder.com/150x180?text=Tanpa+Foto'");
+                };
 
-                if (s) {
-                    // Isi Data
-                    document.getElementById('p-name').innerText = s.name;
-                    document.getElementById('p-id').innerText = s.id;
-                    document.getElementById('p-class').innerText = s.kelas;
-                    
-                    // Logika Foto (Coba JPG, jika gagal coba PNG)
-                    photoEl.src = `img/siswa/${s.id}.jpg`;
-                    photoEl.onerror = function() {
-                        this.onerror = null; // Menghindari looping error
-                        this.src = `img/siswa/${s.id}.png`;
-                        this.setAttribute('onerror', "this.src='https://via.placeholder.com/150x180?text=Tanpa+Foto'");
-                    };
+                // --- PERBAIKAN LOGIKA STATUS (TERMASUK PULANG) ---
+                const config = getConfig();
+                const sekarang = new Date();
+                const jamAngka = sekarang.getHours();
+                const jamMenit = sekarang.toLocaleTimeString('id-ID', {hour12:false, hour:'2-digit', minute:'2-digit'});
+                
+                let status = "";
+                let statusClass = "";
 
-                    // Penentuan Status
-                    const config = getConfig();
-                    const sekarang = new Date().toLocaleTimeString('id-ID', {hour12:false, hour:'2-digit', minute:'2-digit'});
-                    const status = sekarang <= config.jamMasuk ? "TEPAT WAKTU" : "TERLAMBAT";
-                    
-                    statusEl.innerText = status;
-                    statusEl.className = "status-pill " + (status === "TEPAT WAKTU" ? "status-ok" : "status-late");
-
-                    // SIMPAN KE CLOUD & KIRIM WA (Panggil fungsi dari script-common.js)
-                    saveAttendanceAuto(s, status); 
-
+                if (jamAngka >= 12) {
+                    status = "PULANG";
+                    statusClass = "status-blue"; // Pastikan status-blue ada di style.css
                 } else {
-                    // Jika Siswa Tidak Ditemukan
-                    document.getElementById('p-name').innerText = "DATA TIDAK ADA";
-                    document.getElementById('p-id').innerText = id;
-                    document.getElementById('p-class').innerText = "-";
-                    photoEl.src = 'https://via.placeholder.com/150x180?text=Error';
-                    statusEl.innerText = "GAGAL";
-                    statusEl.className = "status-pill status-late";
+                    if (jamMenit <= config.jamMasuk) {
+                        status = "TEPAT WAKTU";
+                        statusClass = "status-ok";
+                    } else {
+                        status = "TERLAMBAT";
+                        statusClass = "status-late";
+                    }
                 }
-            } catch (err) {
-                console.error("Scan Error:", err);
-            }
+                
+                statusEl.innerText = status;
+                statusEl.className = "status-pill " + statusClass;
 
-            // Kembali ke layar awal setelah 5 detik
-            setTimeout(() => {
-                document.getElementById('idle-view').classList.remove('hidden');
-                document.getElementById('student-view').classList.add('hidden');
-                document.getElementById('barcode-input').focus();
-            }, 5000);
+                // SIMPAN KE CLOUD & KIRIM WA (Panggil fungsi dari script-common.js)
+                saveAttendanceAuto(s, status); 
+
+            } else {
+                // Jika Siswa Tidak Ditemukan
+                document.getElementById('p-name').innerText = "DATA TIDAK ADA";
+                document.getElementById('p-id').innerText = id;
+                document.getElementById('p-class').innerText = "-";
+                photoEl.src = 'https://via.placeholder.com/150x180?text=Error';
+                statusEl.innerText = "GAGAL";
+                statusEl.className = "status-pill status-late";
+            }
+        } catch (err) {
+            console.error("Scan Error:", err);
         }
-    </script>
-</body>
-</html>
+
+        // Kembali ke layar awal setelah 5 detik
+        const timeoutId = setTimeout(() => {
+            document.getElementById('idle-view').classList.remove('hidden');
+            document.getElementById('student-view').classList.add('hidden');
+            document.getElementById('barcode-input').focus();
+        }, 5000);
+    }
+</script>
