@@ -71,17 +71,22 @@ async function importX(el) {
 // 5. FUNGSI SIMPAN ABSENSI (LOGIKA 3 STATUS: TEPAT, TERLAMBAT, PULANG)
 async function saveAttendanceAuto(siswa, statusManual = null) {
     const sekarang = new Date();
+    // Format jam ke HH:mm (contoh: 07:45 atau 13:10)
     const jamMenit = sekarang.toLocaleTimeString('id-ID', {hour12:false, hour:'2-digit', minute:'2-digit'});
     const jamAngka = sekarang.getHours();
     
-    // Penentuan Status Otomatis jika tidak dikirim manual
     let status = statusManual;
+    
     if (!status) {
+        // LOGIKA UTAMA: Jika sudah jam 12 ke atas, langsung dianggap PULANG
         if (jamAngka >= 12) {
             status = "PULANG";
-        } else if (jamMenit <= getConfig().jamMasuk) {
+        } 
+        // Jika masih pagi (sebelum jam 12), cek keterlambatan
+        else if (jamMenit <= getConfig().jamMasuk) {
             status = "TEPAT WAKTU";
-        } else {
+        } 
+        else {
             status = "TERLAMBAT";
         }
     }
@@ -94,6 +99,9 @@ async function saveAttendanceAuto(siswa, statusManual = null) {
         timestamp: sekarang.toISOString(),
         waParent: siswa.wa || ""
     };
+
+    // ... (proses simpan ke Firebase dan kirim WA tetap sama)
+}
 
     try {
         // Simpan ke Firebase (POST agar menambah data baru)
@@ -176,3 +184,4 @@ async function delL(timestamp) {
         location.reload();
     }
 }
+
