@@ -70,39 +70,50 @@
         });
 
         // Menampilkan data siswa di layar
-        function showDisplay(res) {
-            const idle = document.getElementById('idle-view');
-            const student = document.getElementById('student-view');
-            
-            idle.classList.add('hidden');
-            student.classList.remove('hidden');
+        // Ganti fungsi showDisplay di index.html Anda dengan ini
+async function showDisplay(id) {
+    try {
+        const students = await getStudents();
+        // Pastikan id dibandingkan dalam tipe data yang sama (string)
+        const s = students.find(item => String(item.id) === String(id).trim());
 
-            document.getElementById('p-name').innerText = res.studentData.name;
-            document.getElementById('p-id').innerText = res.studentData.id;
-            document.getElementById('p-class').innerText = res.studentData.kelas;
-            document.getElementById('p-img').src = `img/siswa/${res.studentData.id}.jpg`;
+        if (s) {
+            document.getElementById('display-name').innerText = s.name;
+            document.getElementById('display-id').innerText = s.id;
+            document.getElementById('display-kelas').innerText = s.kelas;
             
-            const s = document.getElementById('p-status');
-            s.innerText = res.success ? res.mode : res.message;
-            
-            // Atur warna status
-            let statusClass = "status-pill ";
-            if (res.success) {
-                statusClass += res.mode.toLowerCase().replace(/\s+/g, '-');
-            } else {
-                statusClass += "error-status";
-            }
-            s.className = statusClass;
+            // Perbaikan URL Foto
+            const photoEl = document.getElementById('display-photo');
+            photoEl.src = `img/siswa/${s.id}.jpg`;
+            photoEl.onerror = () => photoEl.src = "https://via.placeholder.com/150?text=Tanpa+Foto";
 
-            // Kembali ke tampilan idle setelah 4 detik
-            setTimeout(() => { 
-                student.classList.add('hidden'); 
-                idle.classList.remove('hidden'); 
-            }, 4000);
+            // Logika Status
+            const config = getConfig();
+            const sekarang = new Date().toLocaleTimeString('id-ID', {hour12:false, hour:'2-digit', minute:'2-digit'});
+            const status = sekarang <= config.jamMasuk ? "TEPAT WAKTU" : "TERLAMBAT";
+            
+            const statusEl = document.getElementById('display-status');
+            statusEl.innerText = status;
+            statusEl.className = status === "TEPAT WAKTU" ? "status-ok" : "status-late";
+
+            saveAttendanceAuto(s, status);
+        } else {
+            // Jika ID tidak ada di database
+            document.getElementById('display-name').innerText = "ID TIDAK TERDAFTAR";
+            document.getElementById('display-id').innerText = id;
+            document.getElementById('display-status').innerText = "GAGAL";
         }
+    } catch (err) {
+        console.error("Error saat scan:", err);
+    }
+
+    // Refresh otomatis setelah 5 detik untuk scan berikutnya
+    setTimeout(() => { location.reload(); }, 5000);
+}
     </script>
 </body>
 
 </html>
+
 
 
