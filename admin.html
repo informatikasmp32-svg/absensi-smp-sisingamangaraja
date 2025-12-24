@@ -8,8 +8,10 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
     <script>if(!sessionStorage.getItem('admin')) window.location.href='login.html';</script>
     <style>
-        /* Tambahan warna khusus untuk status Pulang */
-        .status-pill.status-blue { background-color: #3498db; color: white; }
+        /* Tambahan warna khusus untuk status Pulang agar seragam */
+        .status-pill.status-blue { background-color: #3498db !important; color: white !important; }
+        .status-pill.status-ok { background-color: #27ae60 !important; color: white !important; }
+        .status-pill.status-late { background-color: #e74c3c !important; color: white !important; }
     </style>
 </head>
 <body>
@@ -56,7 +58,7 @@
                         <button onclick="document.getElementById('file-ex').click()" style="background:#3498db; color:white; border:none; padding:10px 15px; border-radius:5px; cursor:pointer; font-weight:bold;">📤 Import Excel</button>
                     </div>
                 </div>
-                <p style="font-size: 13px; color: #666; margin-bottom: 20px;">*Tips: Foto otomatis mendeteksi format .jpg atau .png di folder <b>/img/siswa/</b></p>
+                <p style="font-size: 13px; color: #666; margin-bottom: 20px;">*Foto otomatis dari folder <b>/img/siswa/[ID].jpg atau .png</b></p>
                 
                 <table>
                     <thead>
@@ -76,10 +78,10 @@
             <section id="sec-set" class="hidden">
                 <h2>Pengaturan Jam</h2>
                 <div style="background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
-                    <label>Batas Jam Masuk (Tepat Waktu):</label><br>
+                    <label>Batas Jam Masuk (Pagi):</label><br>
                     <input type="time" id="jam-m" style="padding:10px; font-size:1.2rem; margin:10px 0; border:1px solid #ddd; border-radius:5px;"><br>
                     <button onclick="saveS()" style="background:#27ae60; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Simpan Pengaturan</button>
-                    <p style="font-size: 12px; color: #666; margin-top: 10px;">*Catatan: Scan setelah jam 12:00 otomatis dianggap "PULANG".</p>
+                    <p style="font-size: 12px; color: #666; margin-top: 10px;">*Sistem otomatis: Sebelum jam 12:00 (Masuk/Terlambat), Setelah jam 12:00 (Pulang).</p>
                 </div>
             </section>
 
@@ -89,7 +91,7 @@
                     <select id="filter-kelas" style="padding: 10px; border-radius: 5px; flex: 1; border:1px solid #ddd;"></select>
                     <input type="date" id="filter-tanggal" style="padding: 10px; border-radius: 5px; border: 1px solid #ddd;">
                     <button onclick="renderRekap()" style="background:#3498db; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">Tampilkan</button>
-                    <button onclick="printRekap()" style="background:#27ae60; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">🖨️ Cetak PDF</button>
+                    <button onclick="printRekap()" style="background:#27ae60; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">🖨️ Cetak</button>
                 </div>
                 <div id="rekap-result" style="background: white; padding: 20px; border-radius: 10px; border: 1px solid #ddd;">
                     <p style="text-align:center; color:#999;">Pilih kelas dan tanggal terlebih dahulu.</p>
@@ -100,6 +102,7 @@
 
     <script src="script-common.js"></script>
     <script>
+        // Set default tanggal hari ini
         document.getElementById('filter-tanggal').value = new Date().toISOString().split('T')[0];
 
         function show(s) {
@@ -112,7 +115,7 @@
         async function render() {
             const q = document.getElementById('search').value.toLowerCase();
             
-            // 1. RENDER LAPORAN (LOG)
+            // 1. RENDER LAPORAN (LOG) - TERMASUK STATUS PULANG
             const logBody = document.getElementById('tbody-log');
             if (logBody && !document.getElementById('sec-laporan').classList.contains('hidden')) {
                 const allLogs = await getLogs();
@@ -122,7 +125,6 @@
                 );
 
                 logBody.innerHTML = logs.map(l => {
-                    // Logika pewarnaan status tambahan
                     let statusClass = "status-late";
                     if(l.mode === "TEPAT WAKTU") statusClass = "status-ok";
                     if(l.mode === "PULANG") statusClass = "status-blue";
@@ -154,39 +156,11 @@
                         <td>${s.kelas}</td>
                         <td>${s.wa || '-'}</td>
                         <td style="text-align:center;">
-                            <button onclick="editSiswa('${s.id}')" class="btn-edit">✏️ Edit</button>
-                            <button onclick="delS('${s.id}')" class="btn-del">🗑️ Hapus</button>
+                            <button onclick="editSiswa('${s.id}')" class="btn-edit">Edit</button>
+                            <button onclick="delS('${s.id}')" class="btn-del">Hapus</button>
                         </td>
                     </tr>`).join('');
             }
-        }
-
-        function importX(input) {
-            const file = input.files[0];
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
-                const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                const json = XLSX.utils.sheet_to_json(sheet);
-                
-                const newStudents = json.map(item => ({
-                    id: String(item.ID || item.NIS || ""),
-                    name: String(item.Nama || item.NamaSiswa || ""),
-                    kelas: String(item.Kelas || ""),
-                    wa: String(item.WA || item.WhatsApp || "").replace(/[^\d]/g, "")
-                })).filter(s => s.id && s.name);
-
-                if(confirm(`Impor ${newStudents.length} data siswa ke Cloud?`)) {
-                    await fetch(`${dbRootURL}master_siswa.json`, { 
-                        method: 'PUT', 
-                        body: JSON.stringify(newStudents) 
-                    });
-                    alert("Data berhasil diimpor!");
-                    render();
-                }
-            };
-            reader.readAsArrayBuffer(file);
         }
 
         async function updateKelasDropdown() {
@@ -215,7 +189,9 @@
                         <thead><tr><th>Nama Siswa</th><th style="text-align:center">Status</th><th style="text-align:center">Jam</th></tr></thead><tbody>`;
 
             students.forEach(s => {
+                // Cari data absensi untuk siswa ini pada tanggal yang dipilih
                 const log = logs.find(l => String(l.id) === String(s.id) && new Date(l.timestamp).toLocaleDateString('id-ID') === selectedDate);
+                
                 const statusText = log ? log.mode : "Alpa";
                 const jamText = log ? new Date(log.timestamp).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'}) : "-";
                 
@@ -265,26 +241,38 @@
         }
 
         async function clearAllLogs() { 
-            if(confirm('Hapus SEMUA data absensi secara permanen?')) { 
+            if(confirm('Hapus SEMUA data absensi secara permanen dari Cloud?')) { 
                 await fetch(`${dbRootURL}absensi.json`, { method: 'DELETE' });
+                alert("Semua log dihapus!");
                 render();
             } 
         }
 
         function saveS() {
             localStorage.setItem('absensi_config', JSON.stringify({jamMasuk: document.getElementById('jam-m').value}));
-            alert('Pengaturan jam tersimpan!');
+            alert('Batas jam masuk berhasil disimpan!');
         }
 
         function printRekap() {
             const content = document.getElementById('rekap-result').innerHTML;
             if (content.includes("Pilih kelas")) return alert("Tampilkan data terlebih dahulu!");
             const win = window.open('', '', 'height=700,width=900');
-            win.document.write('<html><head><title>Cetak Rekap</title><style>body{font-family:Arial;padding:30px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:10px;text-align:left}th{background:#f2f2f2}.status-ok{background:green;color:white;padding:3px 8px;border-radius:10px}.status-late{background:red;color:white;padding:3px 8px;border-radius:10px}.status-blue{background:#3498db;color:white;padding:3px 8px;border-radius:10px}</style></head><body>' + content + '</body></html>');
+            win.document.write(`<html><head><title>Cetak Rekap</title>
+                <style>
+                    body{font-family:Arial;padding:30px}
+                    table{width:100%;border-collapse:collapse;margin-top:20px}
+                    th,td{border:1px solid #ddd;padding:10px;text-align:left}
+                    th{background:#f2f2f2}
+                    .status-pill{padding:4px 8px; border-radius:10px; color:white; font-size:10px}
+                    .status-ok{background:green}
+                    .status-late{background:red}
+                    .status-blue{background:#3498db}
+                </style></head><body>${content}</body></html>`);
             win.document.close();
             setTimeout(() => { win.print(); win.close(); }, 500);
         }
 
+        // Inisialisasi awal
         document.getElementById('jam-m').value = getConfig().jamMasuk;
         render();
     </script>
