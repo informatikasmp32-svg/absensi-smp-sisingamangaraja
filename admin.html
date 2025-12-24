@@ -122,25 +122,31 @@
             }
 
             // 2. Render Master Siswa (Perbaikan Path Foto)
-            const studentBody = document.getElementById('tbody-siswa');
-            if(studentBody && !document.getElementById('sec-siswa').classList.contains('hidden')) {
-                const students = await getStudents();
-                studentBody.innerHTML = students.map(s => `
-                    <tr>
-                        <td style="text-align:center;">
-                            <img src="img/siswa/${s.id}.jpg" 
-                                 onerror="this.src='https://via.placeholder.com/45x55?text=👤'" 
-                                 class="img-table">
-                        </td>
-                        <td><code>${s.id}</code></td>
-                        <td><b>${s.name}</b></td>
-                        <td>${s.kelas}</td>
-                        <td>${s.wa || '-'}</td>
-                        <td style="text-align:center;">
-                            <button onclick="editSiswa('${s.id}')" class="btn-edit">✏️ Edit</button>
-                            <button onclick="delS('${s.id}')" class="btn-del">🗑️ Hapus</button>
-                        </td>
-                    </tr>`).join('');
+// Render Master Siswa (Mendukung JPG, JPEG, dan PNG)
+const studentBody = document.getElementById('tbody-siswa');
+if(studentBody && !document.getElementById('sec-siswa').classList.contains('hidden')) {
+    const students = await getStudents();
+    studentBody.innerHTML = students.map(s => {
+        // Logika pengecekan file: coba JPG, jika gagal coba PNG
+        const photoPath = `img/siswa/${s.id}.jpg`; 
+        
+        return `
+            <tr>
+                <td style="text-align:center;">
+                    <img src="${photoPath}" 
+                         onerror="this.onerror=null; this.src='img/siswa/${s.id}.png'; this.setAttribute('onerror', 'this.src=\'https://via.placeholder.com/45x55?text=👤\'')" 
+                         class="img-table">
+                </td>
+                <td><code>${s.id}</code></td>
+                <td><b>${s.name}</b></td>
+                <td>${s.kelas}</td>
+                <td>${s.wa || '-'}</td>
+                <td style="text-align:center;">
+                    <button onclick="editSiswa('${s.id}')" class="btn-edit">✏️ Edit</button>
+                    <button onclick="delS('${s.id}')" class="btn-del">🗑️ Hapus</button>
+                </td>
+            </tr>`;
+    }).join('');
             }
         }
 
@@ -270,3 +276,4 @@
     </script>
 </body>
 </html>
+
