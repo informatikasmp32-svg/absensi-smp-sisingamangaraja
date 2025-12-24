@@ -67,50 +67,46 @@ async function importX(el) {
     };
     reader.readAsArrayBuffer(el.files[0]);
 }
-
-// 5. FUNGSI SIMPAN ABSENSI (LOGIKA 3 STATUS: TEPAT, TERLAMBAT, PULANG)
-async function saveAttendanceAuto(siswa, statusManual = null) {
-    const sekarang = new Date();
-    const jamMenit = sekarang.toLocaleTimeString('id-ID', {hour24:false, hour:'2-digit', minute:'2-digit'});
-    const jamAngka = sekarang.getHours();
+//5. logika waktu
+function saveAttendanceAuto(id) {
+    const now = new Date();
+    const timeStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+    const today = now.toLocaleDateString('id-ID');
     
-    // Penentuan Status Otomatis jika tidak dikirim manual
-    let status = statusManual;
-    if (!status) {
-        if (jamAngka >= 12) {
-            status = "PULANG";
-        } else if (jamMenit <= getConfig().jamMasuk) {
-            status = "TEPAT WAKTU";
-        } else {
-            status = "TERLAMBAT";
-        }
-    }
+    const session = (now.getHours() < 12) ? "Masuk" : "Pulang";
+    const students = getStudents();
+    const student = students.find(s => s.id === id);
+    
+    if (!student) return { success: false, message: "TIDAK TERDAFTAR", studentData: {id, name: "Unknown", kelas: "-"} };
 
-    const logData = {
-        id: siswa.id,
-        name: siswa.name,
-        kelas: siswa.kelas,
-        mode: status,
-        timestamp: sekarang.toISOString(),
-        waParent: siswa.wa || ""
+    let logs = getLogs();
+    const isDuplicate = logs.find(l => l.id === id && l.type === session && new Date(l.timestamp).toLocaleDateString('id-ID') === today);
+
+    if (isDuplicate) return { success: false, message: `SUDAH ABSEN ${session.toUpperCase()}`, studentData: student };
+
+    let status = (session === "Masuk") ? (timeStr > getConfig().jamMasuk ? "Terlambat" : "Tepat Waktu") : "Pulang";
+
+    const entry = { 
+        id, 
+        name: student.name, 
+        kelas: student.kelas, 
+        mode: status, 
+        type: session, 
+        timestamp: now.toISOString() 
     };
+    
+    logs.push(entry);
+    localStorage.setItem('absensi_logs', JSON.stringify(logs));
 
-    try {
-        // Simpan ke Firebase (POST agar menambah data baru)
-        await fetch(`${dbRootURL}absensi.json`, {
-            method: 'POST',
-            body: JSON.stringify(logData)
-        });
-
-        // Pemicu Kirim WhatsApp
-        kirimWA(siswa.name, status, jamMenit, siswa.wa);
-
-        return { success: true, mode: status };
-    } catch (error) {
-        console.error("Gagal simpan absensi ke Cloud:", error);
-        return { success: false };
+    // --- INTEGRASI WA DI SINI ---
+    // Pastikan data siswa memiliki properti 'wa' dari Excel
+    if (student.wa) {
+        sendNotificationWA(student.name, status, student.wa);
     }
+
+    return { success: true, mode: status, studentData: student };
 }
+
 
 // 6. FUNGSI KIRIM WHATSAPP
 function kirimWA(nama, status, jam, nomorWA) {
@@ -176,4 +172,5 @@ async function delL(timestamp) {
         location.reload();
     }
 }
+
 
