@@ -2,7 +2,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
 
 * { box-sizing: border-box; }
-body { font-family: 'Poppins', sans-serif; margin: 0; overflow-x: hidden; }
+body { font-family: 'Poppins', sans-serif; margin: 0; overflow-x: hidden; color: #333; }
 .hidden { display: none !important; }
 
 /* 2. TAMPILAN DASHBOARD (index.html) */
@@ -25,9 +25,9 @@ body { font-family: 'Poppins', sans-serif; margin: 0; overflow-x: hidden; }
     align-items: center;
 }
 
-.clock-section { color: white; text-shadow: 2px 2px 10px rgba(0,0,0,0.5); }
+.clock-section { color: white; text-shadow: 2px 2px 10px rgba(0,0,0,0.5); text-align: center; }
 #big-clock { font-size: 100px; font-weight: 600; margin: 0; line-height: 1; }
-#big-date { font-size: 24px; font-weight: 300; margin-top: 10px; }
+#big-date { font-size: 24px; font-weight: 300; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px; }
 
 .scan-panel {
     background: rgba(255, 255, 255, 0.95);
@@ -36,10 +36,11 @@ body { font-family: 'Poppins', sans-serif; margin: 0; overflow-x: hidden; }
     padding: 40px; 
     text-align: center;
     box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-    min-height: 450px;
+    min-height: 480px;
     display: flex; 
     flex-direction: column; 
     justify-content: center;
+    transition: all 0.5s ease;
 }
 
 /* 3. STATUS PILL (Warna Hasil Scan) */
@@ -52,25 +53,30 @@ body { font-family: 'Poppins', sans-serif; margin: 0; overflow-x: hidden; }
     font-size: 1.2rem;
     margin-top: 15px;
     text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
+
 .status-ok { background: #27ae60; }   /* Hijau: Tepat Waktu */
 .status-late { background: #e74c3c; } /* Merah: Terlambat/Gagal */
+.status-blue { background: #3498db; } /* Biru: Pulang */
 
 /* 4. TAMPILAN ADMIN (admin.html) */
 .container-admin { display: flex; min-height: 100vh; background: #f4f7f6; }
 
 .sidebar { width: 260px; background: #1a252f; color: white; padding: 25px; flex-shrink: 0; }
-.sidebar h2 { font-size: 18px; margin-bottom: 25px; border-bottom: 1px solid #34495e; padding-bottom: 10px; }
+.sidebar h2 { font-size: 16px; margin-bottom: 25px; border-bottom: 1px solid #34495e; padding-bottom: 10px; letter-spacing: 1px; }
 .sidebar button, .sidebar a {
     display: block; width: 100%; padding: 12px; margin: 8px 0;
     background: #2c3e50; border: none; color: #bdc3c7; border-radius: 8px; 
     text-decoration: none; cursor: pointer; text-align: left; transition: 0.3s;
+    font-size: 14px;
 }
-.sidebar button:hover { background: #34495e; color: white; }
+.sidebar button:hover { background: #34495e; color: white; transform: translateX(5px); }
 
-.content { flex: 1; padding: 30px; overflow-y: auto; }
+.content { flex: 1; padding: 30px; overflow-y: auto; background: #f4f7f6; }
 
-/* 5. TABEL DATA SISWA */
+/* 5. TABEL DATA & LOG */
 table { 
     width: 100%; 
     border-collapse: collapse; 
@@ -78,25 +84,49 @@ table {
     border-radius: 12px; 
     overflow: hidden; 
     box-shadow: 0 5px 15px rgba(0,0,0,0.05); 
+    margin-top: 10px;
 }
-th { background: #f8f9fa; padding: 15px; text-align: left; color: #333; font-weight: 600; border-bottom: 2px solid #eee; }
-td { padding: 12px 15px; border-bottom: 1px solid #f1f1f1; color: #555; vertical-align: middle; }
+th { background: #f8f9fa; padding: 15px; text-align: left; color: #333; font-weight: 600; border-bottom: 2px solid #eee; font-size: 14px; }
+td { padding: 12px 15px; border-bottom: 1px solid #f1f1f1; color: #555; vertical-align: middle; font-size: 14px; }
 
-/* Ukuran kolom spesifik agar rapi */
-th:nth-child(1), td:nth-child(1) { width: 80px; text-align: center; } /* Foto */
-th:nth-child(2), td:nth-child(2) { width: 120px; } /* ID */
+/* Highlight ID Siswa */
+code { background: #f1f1f1; padding: 2px 6px; border-radius: 4px; font-family: monospace; color: #e67e22; }
+
+/* Ukuran kolom spesifik */
+th:nth-child(1), td:nth-child(1) { width: 100px; text-align: center; } /* Foto / Waktu */
+th:nth-child(2), td:nth-child(2) { width: 130px; } /* ID */
 
 .img-table { 
     width: 45px; 
     height: 55px; 
     object-fit: cover; 
     border-radius: 6px; 
-    border: 1px solid #ddd; 
+    border: 2px solid #eee; 
     display: block; 
     margin: 0 auto;
+    transition: 0.3s;
 }
+.img-table:hover { transform: scale(1.2); border-color: #3498db; }
 
 /* 6. TOMBOL AKSI ADMIN */
-.btn-edit { background: #f39c12; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
-.btn-del { background: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-left: 5px; }
-.btn-edit:hover, .btn-del:hover { opacity: 0.8; }
+.btn-edit { background: #f39c12; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+.btn-del { background: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; margin-left: 5px; font-size: 12px; }
+.btn-edit:hover, .btn-del:hover { filter: brightness(1.1); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+
+/* 7. FORM & INPUT */
+input[type="text"], input[type="time"], input[type="date"], select {
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    outline: none;
+    transition: 0.3s;
+}
+input:focus { border-color: #3498db; box-shadow: 0 0 5px rgba(52, 152, 219, 0.3); }
+
+/* 8. RESPONSIVE */
+@media (max-width: 900px) {
+    .main-wrapper { grid-template-columns: 1fr; }
+    #big-clock { font-size: 70px; }
+    .sidebar { width: 70px; padding: 10px; }
+    .sidebar h2, .sidebar button span { display: none; }
+}
