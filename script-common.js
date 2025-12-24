@@ -95,18 +95,18 @@ async function importX(el) {
     reader.readAsArrayBuffer(el.files[0]);
 }
 // 5. FUNGSI SIMPAN ABSENSI (ONLINE)
-async function saveAttendanceAuto(id) {
+function saveAttendanceAuto(id) {
     const now = new Date();
     const timeStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
     const today = now.toLocaleDateString('id-ID');
-    const session = (now.getHours() < 12) ? "Masuk" : "Pulang";
     
-    const students = await getStudents();
+    const session = (now.getHours() < 12) ? "Masuk" : "Pulang";
+    const students = getStudents();
     const student = students.find(s => s.id === id);
     
     if (!student) return { success: false, message: "TIDAK TERDAFTAR", studentData: {id, name: "Unknown", kelas: "-"} };
 
-    const logs = await getLogs();
+    let logs = getLogs();
     const isDuplicate = logs.find(l => l.id === id && l.type === session && new Date(l.timestamp).toLocaleDateString('id-ID') === today);
 
     if (isDuplicate) return { success: false, message: `SUDAH ABSEN ${session.toUpperCase()}`, studentData: student };
@@ -122,20 +122,16 @@ async function saveAttendanceAuto(id) {
         timestamp: now.toISOString() 
     };
     
-    try {
-        await fetch(`${dbRootURL}absensi.json`, {
-            method: 'POST',
-            body: JSON.stringify(entry)
-        });
+    logs.push(entry);
+    localStorage.setItem('absensi_logs', JSON.stringify(logs));
 
-        if (student.wa && student.wa !== "-") {
-            sendNotificationWA(student.name, status, student.wa);
-        }
-        
-        return { success: true, mode: status, studentData: student };
-    } catch (e) {
-        return { success: false, message: "KONEKSI INTERNET BERMASALAH" };
+    // --- INTEGRASI WA DI SINI ---
+    // Pastikan data siswa memiliki properti 'wa' dari Excel
+    if (student.wa) {
+        sendNotificationWA(student.name, status, student.wa);
     }
+
+    return { success: true, mode: status, studentData: student };
 }
 
 // 6. FUNGSI EXPORT & TEMPLATE
@@ -174,4 +170,5 @@ function kirimWA(nama, status, jam, nomorWA) {
     // Membuka tab baru untuk WhatsApp
     window.open(`https://wa.me/${phone}?text=${pesan}`, '_blank');
 }
+
 
