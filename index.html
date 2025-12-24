@@ -29,11 +29,12 @@
             </div>
 
             <div id="student-view" class="hidden">
-                <div style="display:grid; grid-template-columns:150px 1fr; text-align:left; gap:20px;">
-                    <img id="p-img" src="" style="width:150px; height:180px; object-fit:cover; border-radius:10px; border:3px solid #3498db;">
+                <div style="display:grid; grid-template-columns:150px 1fr; text-align:left; gap:20px; align-items:center;">
+                    <img id="p-img" src="" 
+                         style="width:150px; height:180px; object-fit:cover; border-radius:10px; border:3px solid #3498db;">
                     <div>
-                        <h2 id="p-name" style="margin:0; color:#2c3e50;">-</h2>
-                        <p>ID: <b id="p-id">-</b> | Kelas: <b id="p-class">-</b></p>
+                        <h2 id="p-name" style="margin:0; color:#2c3e50; font-size: 24px;">-</h2>
+                        <p style="margin: 5px 0;">ID: <b id="p-id">-</b> | Kelas: <b id="p-class">-</b></p>
                         <div id="p-status" class="status-pill">STATUS</div>
                     </div>
                 </div>
@@ -44,7 +45,7 @@
     </div>
 
     <script>
-        // 1. Update Jam dan Tanggal secara Real-time
+        // 1. Update Jam dan Tanggal
         function updateTime() {
             const n = new Date();
             document.getElementById('big-clock').innerText = n.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
@@ -53,45 +54,46 @@
         setInterval(updateTime, 1000); 
         updateTime();
 
-        // 2. Memastikan input barcode selalu fokus
+        // 2. Fokus Otomatis
         document.addEventListener('click', () => document.getElementById('barcode-input').focus());
         
-        // 3. Menangani Input Barcode
+        // 3. Logika Scan
         document.getElementById('barcode-input').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 const val = e.target.value.trim();
-                if (val !== "") {
-                    showDisplay(val); 
-                }
+                if (val !== "") showDisplay(val);
                 e.target.value = '';
             }
         });
 
-        // 4. Logika Utama Menampilkan Data Siswa
+        // 4. Fungsi Menampilkan Data & Simpan Absensi
         async function showDisplay(id) {
             try {
-                // Tampilan transisi: Sembunyikan idle, tampilkan student-view
+                const students = await getStudents();
+                const s = students.find(item => String(item.id) === String(id).trim());
+
+                // Ganti Tampilan ke Student View
                 document.getElementById('idle-view').classList.add('hidden');
                 document.getElementById('student-view').classList.remove('hidden');
-
-                const students = await getStudents();
-                // Pencarian siswa berdasarkan ID (konversi ke String untuk keamanan)
-                const s = students.find(item => String(item.id) === String(id).trim());
 
                 const photoEl = document.getElementById('p-img');
                 const statusEl = document.getElementById('p-status');
 
                 if (s) {
-                    // Isi data siswa ke layar
+                    // Isi Data
                     document.getElementById('p-name').innerText = s.name;
                     document.getElementById('p-id').innerText = s.id;
                     document.getElementById('p-class').innerText = s.kelas;
                     
-                    // Path foto: pastikan file di GitHub/Hosting adalah [ID].jpg
+                    // Logika Foto (Coba JPG, jika gagal coba PNG)
                     photoEl.src = `img/siswa/${s.id}.jpg`;
-                    photoEl.onerror = () => { photoEl.src = 'https://via.placeholder.com/150x180?text=Tanpa+Foto'; };
+                    photoEl.onerror = function() {
+                        this.onerror = null; // Menghindari looping error
+                        this.src = `img/siswa/${s.id}.png`;
+                        this.setAttribute('onerror', "this.src='https://via.placeholder.com/150x180?text=Tanpa+Foto'");
+                    };
 
-                    // Logika Status Absensi
+                    // Penentuan Status
                     const config = getConfig();
                     const sekarang = new Date().toLocaleTimeString('id-ID', {hour12:false, hour:'2-digit', minute:'2-digit'});
                     const status = sekarang <= config.jamMasuk ? "TEPAT WAKTU" : "TERLAMBAT";
@@ -99,12 +101,12 @@
                     statusEl.innerText = status;
                     statusEl.className = "status-pill " + (status === "TEPAT WAKTU" ? "status-ok" : "status-late");
 
-                    // Simpan data ke Cloud (Firebase) & Kirim WA Otomatis
+                    // SIMPAN KE CLOUD & KIRIM WA (Panggil fungsi dari script-common.js)
                     saveAttendanceAuto(s, status); 
 
                 } else {
-                    // Penanganan jika ID tidak terdaftar
-                    document.getElementById('p-name').innerText = "ID TIDAK TERDAFTAR";
+                    // Jika Siswa Tidak Ditemukan
+                    document.getElementById('p-name').innerText = "DATA TIDAK ADA";
                     document.getElementById('p-id').innerText = id;
                     document.getElementById('p-class').innerText = "-";
                     photoEl.src = 'https://via.placeholder.com/150x180?text=Error';
@@ -112,10 +114,10 @@
                     statusEl.className = "status-pill status-late";
                 }
             } catch (err) {
-                console.error("Kesalahan sistem scan:", err);
+                console.error("Scan Error:", err);
             }
 
-            // Kembalikan ke tampilan standby (Idle) setelah 5 detik
+            // Kembali ke layar awal setelah 5 detik
             setTimeout(() => {
                 document.getElementById('idle-view').classList.remove('hidden');
                 document.getElementById('student-view').classList.add('hidden');
