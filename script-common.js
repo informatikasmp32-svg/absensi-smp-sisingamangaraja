@@ -15,7 +15,7 @@ async function getLogs() {
 }
 
 const getStudents = () => JSON.parse(localStorage.getItem('master_siswa') || '[]');
-const getConfig = () => JSON.parse(localStorage.getItem('absensi_config') || '{"jamMasuk":"07:15"}');
+const getConfig = () => JSON.parse(localStorage.getItem('absensi_config') || '{"jamMasuk":"07:50"}');
 
 // 3. FUNGSI SIMPAN ABSENSI (ONLINE)
 async function saveAttendanceAuto(id) {
@@ -85,3 +85,4 @@ function sendNotificationWA(name, status, phone) {
     console.log("Kirim WA ke: " + phone);
 
 }
+
