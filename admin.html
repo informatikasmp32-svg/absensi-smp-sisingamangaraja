@@ -1,88 +1,4 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <title>Admin - SMP Sisingamangaraja</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="icon" type="image/png" href="img/logo87.PNG">
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
-    <script>if(!sessionStorage.getItem('admin')) window.location.href='login.html';</script>
-</head>
-<body>
-    <div class="container-admin">
-        <aside class="sidebar">
-            <h2 style="border:none; font-size:16px; text-align:center;">SMP SISINGAMANGARAJA</h2>
-            <button onclick="show('laporan')">📊 Laporan Absensi</button>
-            <button onclick="show('siswa')">👥 Master Siswa</button>
-            <button onclick="show('set')">⚙️ Pengaturan Jam</button>
-            <button onclick="show('rekap')">📅 Rekap Per Kelas</button>
-            <hr style="border: 0.5px solid #444; margin: 20px 0;">
-            <button onclick="exportToExcel()" style="background:#27ae60; color:white;">📥 Export Excel</button>
-            <button onclick="clearAllLogs()" style="background:#e74c3c; color:white;">🗑️ Hapus Semua Log</button>
-            <a href="index.html" style="background:#95a5a6; text-align:center; display:block; padding:10px; border-radius:5px; text-decoration:none; color:white; margin:10px 0;">🖥️ Dashboard</a>
-            <button onclick="sessionStorage.clear(); window.location.href='login.html'" style="background:#34495e; color:white; margin-top:20px;">Logout</button>
-        </aside>
-
-        <main class="content">
-            <section id="sec-laporan">
-                <h2>Laporan Kehadiran</h2>
-                <input type="text" id="search" placeholder="Cari Nama/Kelas..." onkeyup="render()" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; margin-bottom:15px;">
-                <table>
-                    <thead>
-                        <tr><th>Waktu</th><th>Nama</th><th>Kelas</th><th>Status</th><th>Aksi</th></tr>
-                    </thead>
-                    <tbody id="tbody-log"></tbody>
-                </table>
-            </section>
-
-            <section id="sec-siswa" class="hidden">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h2>Manajemen Data Siswa</h2>
-                    <div style="display: flex; gap: 10px;">
-                        <button onclick="downloadTemplateExcel()" style="background:#f39c12; color:white; padding:10px; border:none; border-radius:5px; cursor:pointer;">📄 Template</button>
-                        <input type="file" id="file-ex" accept=".xlsx" style="display:none" onchange="importX(this)">
-                        <button onclick="document.getElementById('file-ex').click()" style="background:#3498db; color:white; border:none; padding:10px; border-radius:5px; cursor:pointer;">📤 Import Excel</button>
-                    </div>
-                </div>
-                <p style="font-size: 12px; color: #666;">*Tips: Foto disimpan di <b>/img/siswa/[ID].jpg</b></p>
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width:60px;">Foto</th>
-                            <th>ID/NIS</th>
-                            <th>Nama Siswa</th>
-                            <th>Kelas</th>
-                            <th>WA Orang Tua</th> 
-                            <th style="text-align:center;">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tbody-siswa"></tbody>
-                </table>
-            </section>
-
-            <section id="sec-set" class="hidden">
-                <h2>Pengaturan Jam</h2>
-                <label>Batas Jam Masuk (Tepat Waktu):</label><br>
-                <input type="time" id="jam-m" style="padding:10px; font-size:1.2rem; margin:10px 0;"><br>
-                <button onclick="saveS()" style="background:#27ae60; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">Simpan Pengaturan</button>
-            </section>
-
-            <section id="sec-rekap" class="hidden">
-                <h2>Rekap Absensi Per Kelas</h2>
-                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                    <select id="filter-kelas" style="padding: 10px; border-radius: 5px; flex: 1;"></select>
-                    <input type="date" id="filter-tanggal" style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
-                    <button onclick="renderRekap()" style="background:#3498db; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">Tampilkan</button>
-                    <button onclick="printRekap()" style="background:#27ae60; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">🖨️ Cetak PDF</button>
-                </div>
-                <div id="rekap-result" style="background: white; padding: 20px; border-radius: 10px; border: 1px solid #ddd;">
-                    <p>Pilih kelas dan tanggal terlebih dahulu.</p>
-                </div>
-            </section>
-        </main>
-    </div>
-
-    <script src="script-common.js"></script>
+<script src="script-common.js"></script>
     <script>
         document.getElementById('filter-tanggal').value = new Date().toISOString().split('T')[0];
 
@@ -93,22 +9,17 @@
             render();
         }
 
-        // 1. RENDER UTAMA (Sync Cloud)
         async function render() {
             const q = document.getElementById('search').value.toLowerCase();
             
-            // Render Log Absensi
+            // 1. Render Log Absensi
             const logBody = document.getElementById('tbody-log');
             if (logBody) {
-                logBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Memuat data log...</td></tr>`;
                 const allLogs = await getLogs();
                 const logs = allLogs.reverse().filter(l => 
-                    l.name.toLowerCase().includes(q) || 
-                    (l.kelas && l.kelas.toLowerCase().includes(q))
+                    l.name.toLowerCase().includes(q) || (l.kelas && l.kelas.toLowerCase().includes(q))
                 );
-
-                logBody.innerHTML = logs.length === 0 ? `<tr><td colspan="5" style="text-align:center;">Tidak ada data ditemukan</td></tr>` : 
-                logs.map(l => `
+                logBody.innerHTML = logs.map(l => `
                     <tr>
                         <td>${new Date(l.timestamp).toLocaleString('id-ID')}</td>
                         <td><b>${l.name}</b></td>
@@ -118,10 +29,9 @@
                     </tr>`).join('');
             }
 
-            // Render Master Siswa
+            // 2. Render Master Siswa
             const studentBody = document.getElementById('tbody-siswa');
             if(studentBody) {
-                studentBody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Memuat data siswa...</td></tr>`;
                 const students = await getStudents();
                 studentBody.innerHTML = students.map(s => `
                     <tr>
@@ -131,76 +41,36 @@
                         <td>${s.kelas}</td>
                         <td>${s.wa || '-'}</td>
                         <td style="text-align:center;">
-                            <button onclick="editSiswa('${s.id}')" style="background:#f39c12; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; margin-right:5px;">✏️ Edit</button>
+                            <button onclick="editSiswa('${s.id}')" style="background:#f39c12; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">✏️ Edit</button>
                             <button onclick="delS('${s.id}')" class="btn-del">🗑️ Hapus</button>
                         </td>
                     </tr>`).join('');
             }
         }
 
-        async function updateKelasDropdown() {
-            const students = await getStudents();
-            const listKelas = [...new Set(students.map(s => s.kelas))].sort();
-            document.getElementById('filter-kelas').innerHTML = '<option value="">-- Pilih Kelas --</option>' + 
-                listKelas.map(k => `<option value="${k}">${k}</option>`).join('');
-        }
-
-        // 2. RENDER REKAP (Sync Cloud)
-        async function renderRekap() {
-            const kelas = document.getElementById('filter-kelas').value;
-            const tglInput = document.getElementById('filter-tanggal').value;
-            if (!kelas || !tglInput) return alert("Pilih kelas & tanggal!");
-            
-            const rekapResult = document.getElementById('rekap-result');
-            rekapResult.innerHTML = "<p style='text-align:center;'>Mengambil data server...</p>";
-
-            const selectedDate = new Date(tglInput).toLocaleDateString('id-ID');
-            const studentsData = await getStudents();
-            const students = studentsData.filter(s => s.kelas === kelas);
-            const logs = await getLogs();
-
-            let html = `<h3>LAPORAN ABSENSI KELAS: ${kelas}</h3><p>Tanggal: <b>${selectedDate}</b></p>`;
-            html += `<table border="1" style="width:100%; border-collapse:collapse; margin-top:10px;">
-                        <thead><tr style="background:#f2f2f2;"><th>Nama Siswa</th><th>Status</th><th>Jam</th></tr></thead><tbody>`;
-
-            students.forEach(s => {
-                const log = logs.find(l => l.id === s.id && new Date(l.timestamp).toLocaleDateString('id-ID') === selectedDate);
-                const statusText = log ? log.mode : "Alpa / Belum Scan";
-                const jamText = log ? new Date(log.timestamp).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'}) : "-";
-                const colorStyle = !log ? 'color: red; font-weight: bold;' : '';
-
-                html += `<tr>
-                            <td>${s.name}</td>
-                            <td style="text-align:center; ${colorStyle}">${statusText}</td>
-                            <td style="text-align:center;">${jamText}</td>
-                        </tr>`;
-            });
-            html += `</tbody></table>`;
-            rekapResult.innerHTML = html;
-        }
-
-        // 3. MANAJEMEN DATA (Sync Cloud)
         async function editSiswa(id) {
             let students = await getStudents();
             let index = students.findIndex(s => s.id === id);
             if (index !== -1) {
                 const s = students[index];
-                const nNama = prompt("Edit Nama:", s.name); if (!nNama) return;
-                const nKelas = prompt("Edit Kelas:", s.kelas); if (!nKelas) return;
-                const nWA = prompt("Edit WA (62...):", s.wa); if (!nWA) return;
-
-                students[index].name = nNama;
-                students[index].kelas = nKelas;
-                students[index].wa = nWA.replace(/[^\d]/g, "");
-
-                await fetch(`${dbRootURL}master_siswa.json`, { method: 'PUT', body: JSON.stringify(students) });
-                alert("Data diperbarui di Cloud!");
-                render();
+                const nNama = prompt("Edit Nama:", s.name);
+                const nKelas = prompt("Edit Kelas:", s.kelas);
+                const nWA = prompt("Edit WA (Contoh: 62812...):", s.wa);
+                
+                if (nNama && nKelas && nWA) {
+                    students[index].name = nNama;
+                    students[index].kelas = nKelas;
+                    students[index].wa = nWA.replace(/[^\d]/g, "");
+                    
+                    await fetch(`${dbRootURL}master_siswa.json`, { method: 'PUT', body: JSON.stringify(students) });
+                    alert("Data berhasil diperbarui!");
+                    render();
+                }
             }
         }
 
         async function delS(id) {
-            if(confirm('Hapus siswa ini dari Cloud?')) {
+            if(confirm('Hapus siswa ini?')) {
                 let students = await getStudents();
                 let filtered = students.filter(s => s.id !== id);
                 await fetch(`${dbRootURL}master_siswa.json`, { method: 'PUT', body: JSON.stringify(filtered) });
@@ -209,34 +79,14 @@
         }
 
         async function clearAllLogs() { 
-            if(confirm('Hapus SEMUA data absensi di Cloud secara permanen?')) { 
+            if(confirm('Hapus SEMUA data absensi?')) { 
                 await fetch(`${dbRootURL}absensi.json`, { method: 'DELETE' });
                 render();
             } 
         }
 
-        async function delL(timestamp) {
-            alert("Untuk menghapus log spesifik, silakan kelola melalui Firebase Console demi integritas data.");
-        }
-
-        function saveS() {
-            localStorage.setItem('absensi_config', JSON.stringify({jamMasuk: document.getElementById('jam-m').value}));
-            alert('Konfigurasi jam tersimpan di browser ini!');
-        }
-
-        function printRekap() {
-            const content = document.getElementById('rekap-result').innerHTML;
-            if (content.includes("Pilih kelas")) return alert("Tampilkan data terlebih dahulu!");
-            const win = window.open('', '', 'height=700,width=900');
-            win.document.write('<html><head><title>Cetak Rekap Absensi</title><style>body{font-family:Arial; padding:30px} table{width:100%; border-collapse:collapse} th,td{border:1px solid #000; padding:8px; text-align:left} h3, p{text-align:center;}</style></head><body><div style="text-align:center;"><h2>SMP SWASTA SISINGAMANGARAJA</h2><p>Rekapitulasi Kehadiran Siswa</p><hr></div>' + content + '</body></html>');
-            win.document.close();
-            setTimeout(() => { win.print(); win.close(); }, 500);
-        }
-
-        // Inisialisasi
-        document.getElementById('jam-m').value = getConfig().jamMasuk;
+        // Jalankan awal
         render();
     </script>
 </body>
 </html>
-
