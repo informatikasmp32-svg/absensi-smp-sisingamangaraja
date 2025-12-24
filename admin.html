@@ -103,23 +103,28 @@
             const q = document.getElementById('search').value.toLowerCase();
             
             // 1. Render Log Absensi
-            const logBody = document.getElementById('tbody-log');
-            if (logBody && !document.getElementById('sec-laporan').classList.contains('hidden')) {
-                const allLogs = await getLogs();
-                const logs = allLogs.reverse().filter(l => 
-                    l.name.toLowerCase().includes(q) || 
-                    (l.kelas && l.kelas.toLowerCase().includes(q))
-                );
+// Render Log Absensi
+const logBody = document.getElementById('tbody-log');
+if (logBody) {
+    const allLogs = await getLogs();
+    const logs = allLogs.reverse().filter(l => 
+        l.name.toLowerCase().includes(q) || 
+        (l.kelas && l.kelas.toLowerCase().includes(q))
+    );
 
-                logBody.innerHTML = logs.map(l => `
-                    <tr>
-                        <td>${new Date(l.timestamp).toLocaleString('id-ID')}</td>
-                        <td><b>${l.name}</b></td>
-                        <td>${l.kelas}</td>
-                        <td><span class="status-pill ${l.mode === 'TEPAT WAKTU' ? 'status-ok' : 'status-late'}" style="font-size:11px; padding:4px 10px;">${l.mode}</span></td>
-                        <td><button onclick="delL('${l.timestamp}')" class="btn-del">Hapus</button></td>
-                    </tr>`).join('');
-            }
+    logBody.innerHTML = logs.map(l => `
+        <tr>
+            <td>${new Date(l.timestamp).toLocaleString('id-ID')}</td>
+            <td><b>${l.name}</b></td>
+            <td>${l.kelas}</td>
+            <td>
+                <span class="status-pill ${l.mode === 'TEPAT WAKTU' ? 'status-ok' : 'status-late'}" style="font-size:11px; padding:4px 10px;">
+                    ${l.mode}
+                </span>
+            </td>
+            <td><button onclick="delL('${l.timestamp}')" class="btn-del">Hapus</button></td>
+        </tr>`).join('');
+}
 
             // 2. Render Master Siswa (Perbaikan Path Foto)
 // Render Master Siswa (Mendukung JPG, JPEG, dan PNG)
@@ -276,4 +281,5 @@ if(studentBody && !document.getElementById('sec-siswa').classList.contains('hidd
     </script>
 </body>
 </html>
+
 
