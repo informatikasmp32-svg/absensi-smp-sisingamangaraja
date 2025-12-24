@@ -162,4 +162,16 @@ function sendNotificationWA(name, status, phone) {
     const url = `https://wa.me/${phone}?text=${msg}`;
     console.log("Kirim WA ke: " + phone);
 }
+function kirimWA(nama, status, jam, nomorWA) {
+    if (!nomorWA || nomorWA === '-') return;
+
+    // Pastikan nomor mulai dengan 62
+    let phone = nomorWA.replace(/[^\d]/g, "");
+    if (phone.startsWith("0")) phone = "62" + phone.slice(1);
+
+    const pesan = `Info Absensi SMP Sisingamangaraja%0A%0ANama: *${nama}*%0AStatus: *${status}*%0AJam: ${jam}%0A%0A_Pesan ini dikirim otomatis oleh sistem._`;
+    
+    // Membuka tab baru untuk WhatsApp
+    window.open(`https://wa.me/${phone}?text=${pesan}`, '_blank');
+}
 
