@@ -85,7 +85,9 @@
                     
                     const photoEl = document.getElementById('p-img');
                     photoEl.src = `img/siswa/${s.id}.jpg`;
-
+                    photoEl.onerror = function() {
+                    this.src = 'https://via.placeholder.com/150x180?text=Tanpa+Foto';
+                    };
                     // Logika Penentuan Status
                     const config = getConfig();
                     const sekarang = new Date().toLocaleTimeString('id-ID', {hour12:false, hour:'2-digit', minute:'2-digit'});
@@ -120,3 +122,4 @@
     </script>
 </body>
 </html>
+
