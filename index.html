@@ -44,7 +44,7 @@
     </div>
 
     <script>
-        // Fungsi update Jam dan Tanggal
+        // 1. Update Jam dan Tanggal
         function update() {
             const n = new Date();
             document.getElementById('big-clock').innerText = n.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
@@ -53,67 +53,70 @@
         setInterval(update, 1000); 
         update();
 
-        // Fokus otomatis ke input barcode
+        // 2. Fokus otomatis ke input barcode
         document.addEventListener('click', () => document.getElementById('barcode-input').focus());
         
-        // Logika Scan
+        // 3. Logika Input Barcode
         document.getElementById('barcode-input').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 const val = e.target.value.trim();
                 if (val !== "") {
-                    // saveAttendanceAuto ada di script-common.js
-                    const res = saveAttendanceAuto(val);
-                    showDisplay(res);
+                    showDisplay(val); // Langsung panggil showDisplay dengan ID barcode
                 }
                 e.target.value = '';
             }
         });
 
-        // Menampilkan data siswa di layar
-        // Ganti fungsi showDisplay di index.html Anda dengan ini
-async function showDisplay(id) {
-    try {
-        const students = await getStudents();
-        // Pastikan id dibandingkan dalam tipe data yang sama (string)
-        const s = students.find(item => String(item.id) === String(id).trim());
+        // 4. Menampilkan data siswa di layar
+        async function showDisplay(id) {
+            try {
+                // Tampilkan student-view, sembunyikan idle-view
+                document.getElementById('idle-view').classList.add('hidden');
+                document.getElementById('student-view').classList.remove('hidden');
 
-        if (s) {
-            document.getElementById('display-name').innerText = s.name;
-            document.getElementById('display-id').innerText = s.id;
-            document.getElementById('display-kelas').innerText = s.kelas;
-            
-            // Perbaikan URL Foto
-            const photoEl = document.getElementById('display-photo');
-            photoEl.src = `img/siswa/${s.id}.jpg`;
-            photoEl.onerror = () => photoEl.src = "https://via.placeholder.com/150?text=Tanpa+Foto";
+                const students = await getStudents();
+                const s = students.find(item => String(item.id) === String(id).trim());
 
-            // Logika Status
-            const config = getConfig();
-            const sekarang = new Date().toLocaleTimeString('id-ID', {hour12:false, hour:'2-digit', minute:'2-digit'});
-            const status = sekarang <= config.jamMasuk ? "TEPAT WAKTU" : "TERLAMBAT";
-            
-            const statusEl = document.getElementById('display-status');
-            statusEl.innerText = status;
-            statusEl.className = status === "TEPAT WAKTU" ? "status-ok" : "status-late";
+                if (s) {
+                    // Isi data ke elemen HTML (ID Sesuai dengan HTML di atas)
+                    document.getElementById('p-name').innerText = s.name;
+                    document.getElementById('p-id').innerText = s.id;
+                    document.getElementById('p-class').innerText = s.kelas;
+                    
+                    const photoEl = document.getElementById('p-img');
+                    photoEl.src = `img/siswa/${s.id}.jpg`;
 
-            saveAttendanceAuto(s, status);
-        } else {
-            // Jika ID tidak ada di database
-            document.getElementById('display-name').innerText = "ID TIDAK TERDAFTAR";
-            document.getElementById('display-id').innerText = id;
-            document.getElementById('display-status').innerText = "GAGAL";
+                    // Logika Penentuan Status
+                    const config = getConfig();
+                    const sekarang = new Date().toLocaleTimeString('id-ID', {hour12:false, hour:'2-digit', minute:'2-digit'});
+                    const status = sekarang <= config.jamMasuk ? "TEPAT WAKTU" : "TERLAMBAT";
+                    
+                    const statusEl = document.getElementById('p-status');
+                    statusEl.innerText = status;
+                    statusEl.className = "status-pill " + (status === "TEPAT WAKTU" ? "status-ok" : "status-late");
+
+                    // Kirim ke database & WA
+                    saveAttendanceAuto(s, status); 
+
+                } else {
+                    // Jika ID tidak ditemukan
+                    document.getElementById('p-name').innerText = "ID TIDAK TERDAFTAR";
+                    document.getElementById('p-id').innerText = id;
+                    document.getElementById('p-class').innerText = "-";
+                    document.getElementById('p-status').innerText = "GAGAL";
+                    document.getElementById('p-status').className = "status-pill status-late";
+                }
+            } catch (err) {
+                console.error("Error saat scan:", err);
+            }
+
+            // Kembali ke tampilan awal setelah 5 detik
+            setTimeout(() => {
+                document.getElementById('idle-view').classList.remove('hidden');
+                document.getElementById('student-view').classList.add('hidden');
+                document.getElementById('barcode-input').focus();
+            }, 5000);
         }
-    } catch (err) {
-        console.error("Error saat scan:", err);
-    }
-
-    // Refresh otomatis setelah 5 detik untuk scan berikutnya
-    setTimeout(() => { location.reload(); }, 5000);
-}
     </script>
 </body>
-
 </html>
-
-
-
