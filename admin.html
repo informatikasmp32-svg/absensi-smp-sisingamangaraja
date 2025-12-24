@@ -31,7 +31,13 @@
                 <input type="text" id="search" placeholder="Cari Nama/Kelas..." onkeyup="render()" style="width:100%; padding:12px; border-radius:8px; border:1px solid #ddd; margin-bottom:15px;">
                 <table>
                     <thead>
-                        <tr><th>Waktu</th><th>Nama</th><th>Kelas</th><th>Status</th><th>Aksi</th></tr>
+                        <tr>
+                            <th>Waktu</th>
+                            <th>Nama</th>
+                            <th>Kelas</th>
+                            <th>Status</th>
+                            <th>Aksi</th>
+                        </tr>
                     </thead>
                     <tbody id="tbody-log"></tbody>
                 </table>
@@ -46,7 +52,7 @@
                         <button onclick="document.getElementById('file-ex').click()" style="background:#3498db; color:white; border:none; padding:10px 15px; border-radius:5px; cursor:pointer; font-weight:bold;">📤 Import Excel</button>
                     </div>
                 </div>
-                <p style="font-size: 13px; color: #666; margin-bottom: 20px;">*Tips: Foto disimpan di folder <b>/img/siswa/[ID].jpg</b></p>
+                <p style="font-size: 13px; color: #666; margin-bottom: 20px;">*Tips: Foto otomatis mendeteksi format .jpg atau .png di folder <b>/img/siswa/</b></p>
                 
                 <table>
                     <thead>
@@ -89,7 +95,6 @@
 
     <script src="script-common.js"></script>
     <script>
-        // Set default tanggal hari ini
         document.getElementById('filter-tanggal').value = new Date().toISOString().split('T')[0];
 
         function show(s) {
@@ -102,74 +107,49 @@
         async function render() {
             const q = document.getElementById('search').value.toLowerCase();
             
-            // 1. Render Log Absensi
-// Render Log Absensi
-const logBody = document.getElementById('tbody-log');
-if (logBody) {
-    const allLogs = await getLogs();
-    const logs = allLogs.reverse().filter(l => 
-        l.name.toLowerCase().includes(q) || 
-        (l.kelas && l.kelas.toLowerCase().includes(q))
-    );
+            // 1. RENDER LAPORAN (LOG)
+            const logBody = document.getElementById('tbody-log');
+            if (logBody && !document.getElementById('sec-laporan').classList.contains('hidden')) {
+                const allLogs = await getLogs();
+                const logs = allLogs.reverse().filter(l => 
+                    (l.name && l.name.toLowerCase().includes(q)) || 
+                    (l.kelas && l.kelas.toLowerCase().includes(q))
+                );
 
-    logBody.innerHTML = logs.map(l => `
-        <tr>
-            <td>${new Date(l.timestamp).toLocaleString('id-ID')}</td>
-            <td><b>${l.name}</b></td>
-            <td>${l.kelas}</td>
-            <td>
-                <span class="status-pill ${l.mode === 'TEPAT WAKTU' ? 'status-ok' : 'status-late'}" style="font-size:11px; padding:4px 10px;">
-                    ${l.mode}
-                </span>
-            </td>
-            <td><button onclick="delL('${l.timestamp}')" class="btn-del">Hapus</button></td>
-        </tr>`).join('');
-}
-           // 2. Render Master Siswa (Perbaikan Path Foto)
-// Render Master Siswa (Mendukung JPG, JPEG, dan PNG)
-const studentBody = document.getElementById('tbody-siswa');
-if(studentBody && !document.getElementById('sec-siswa').classList.contains('hidden')) {
-    const students = await getStudents();
-    studentBody.innerHTML = students.map(s => {
-        // Logika pengecekan file: coba JPG, jika gagal coba PNG
-        const photoPath = `img/siswa/${s.id}.jpg`; 
-        
-        return `
-            <tr>
-                <td style="text-align:center;">
-                    <img src="${photoPath}" 
-                         onerror="this.onerror=null; this.src='img/siswa/${s.id}.png'; this.setAttribute('onerror', 'this.src=\'https://via.placeholder.com/45x55?text=👤\'')" 
-                         class="img-table">
-                </td>
-                <td><code>${s.id}</code></td>
-                <td><b>${s.name}</b></td>
-                <td>${s.kelas}</td>
-                <td>${s.wa || '-'}</td>
-                <td style="text-align:center;">
-                    <button onclick="editSiswa('${s.id}')" class="btn-edit">✏️ Edit</button>
-                    <button onclick="delS('${s.id}')" class="btn-del">🗑️ Hapus</button>
-                </td>
-            </tr>`;
-    }).join('');
+                logBody.innerHTML = logs.map(l => `
+                    <tr>
+                        <td>${new Date(l.timestamp).toLocaleString('id-ID')}</td>
+                        <td><b>${l.name}</b></td>
+                        <td>${l.kelas}</td>
+                        <td><span class="status-pill ${l.mode === 'TEPAT WAKTU' ? 'status-ok' : 'status-late'}" style="font-size:11px; padding:4px 10px;">${l.mode}</span></td>
+                        <td><button onclick="delL('${l.timestamp}')" class="btn-del">Hapus</button></td>
+                    </tr>`).join('');
+            }
+
+            // 2. RENDER MASTER SISWA (FOTO JPG/PNG FALLBACK)
+            const studentBody = document.getElementById('tbody-siswa');
+            if(studentBody && !document.getElementById('sec-siswa').classList.contains('hidden')) {
+                const students = await getStudents();
+                studentBody.innerHTML = students.map(s => `
+                    <tr>
+                        <td style="text-align:center;">
+                            <img src="img/siswa/${s.id}.jpg" 
+                                 onerror="this.onerror=null; this.src='img/siswa/${s.id}.png'; this.setAttribute('onerror', 'this.src=\'https://via.placeholder.com/45x55?text=👤\'')" 
+                                 class="img-table">
+                        </td>
+                        <td><code>${s.id}</code></td>
+                        <td><b>${s.name}</b></td>
+                        <td>${s.kelas}</td>
+                        <td>${s.wa || '-'}</td>
+                        <td style="text-align:center;">
+                            <button onclick="editSiswa('${s.id}')" class="btn-edit">✏️ Edit</button>
+                            <button onclick="delS('${s.id}')" class="btn-del">🗑️ Hapus</button>
+                        </td>
+                    </tr>`).join('');
             }
         }
-studentBody.innerHTML = students.map(s => `
-    <tr>
-        <td style="text-align:center;">
-            <img src="img/siswa/${s.id}.jpg" 
-                 onerror="this.onerror=null; this.src='img/siswa/${s.id}.png'; this.setAttribute('onerror', 'this.src=\'https://via.placeholder.com/45x55?text=👤\'')" 
-                 class="img-table">
-        </td>
-        <td><code>${s.id}</code></td>
-        <td><b>${s.name}</b></td>
-        <td>${s.kelas}</td>
-        <td>${s.wa || '-'}</td>
-        <td style="text-align:center;">
-            <button onclick="editSiswa('${s.id}')" class="btn-edit">✏️ Edit</button>
-            <button onclick="delS('${s.id}')" class="btn-del">🗑️ Hapus</button>
-        </td>
-    </tr>`).join('');
-        // --- FUNGSI IMPORT EXCEL (Perbaikan Error Reference) ---
+
+        // FUNGSI IMPORT EXCEL
         function importX(input) {
             const file = input.files[0];
             const reader = new FileReader();
@@ -179,7 +159,6 @@ studentBody.innerHTML = students.map(s => `
                 const sheet = workbook.Sheets[workbook.SheetNames[0]];
                 const json = XLSX.utils.sheet_to_json(sheet);
                 
-                // Mapping data dari Excel ke format sistem
                 const newStudents = json.map(item => ({
                     id: String(item.ID || item.NIS || ""),
                     name: String(item.Nama || item.NamaSiswa || ""),
@@ -225,14 +204,14 @@ studentBody.innerHTML = students.map(s => `
                         <thead><tr><th>Nama Siswa</th><th style="text-align:center">Status</th><th style="text-align:center">Jam</th></tr></thead><tbody>`;
 
             students.forEach(s => {
-                const log = logs.find(l => l.id === s.id && new Date(l.timestamp).toLocaleDateString('id-ID') === selectedDate);
+                const log = logs.find(l => String(l.id) === String(s.id) && new Date(l.timestamp).toLocaleDateString('id-ID') === selectedDate);
                 const statusText = log ? log.mode : "Alpa";
                 const jamText = log ? new Date(log.timestamp).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'}) : "-";
                 const statusClass = log ? (log.mode === 'TEPAT WAKTU' ? 'status-ok' : 'status-late') : '';
 
                 html += `<tr>
                             <td>${s.name}</td>
-                            <td style="text-align:center;"><span class="${log ? 'status-pill ' + statusClass : ''}" style="font-size:11px;">${statusText}</span></td>
+                            <td style="text-align:center;"><span class="${log ? 'status-pill ' + statusClass : ''}" style="font-size:11px; color:${log?'white':'red'}">${statusText}</span></td>
                             <td style="text-align:center;">${jamText}</td>
                         </tr>`;
             });
@@ -242,7 +221,7 @@ studentBody.innerHTML = students.map(s => `
 
         async function editSiswa(id) {
             let students = await getStudents();
-            let index = students.findIndex(s => s.id === id);
+            let index = students.findIndex(s => String(s.id) === String(id));
             if (index !== -1) {
                 const s = students[index];
                 const nNama = prompt("Edit Nama:", s.name); if (!nNama) return;
@@ -262,7 +241,7 @@ studentBody.innerHTML = students.map(s => `
         async function delS(id) {
             if(confirm('Hapus siswa ini?')) {
                 let students = await getStudents();
-                let filtered = students.filter(s => s.id !== id);
+                let filtered = students.filter(s => String(s.id) !== String(id));
                 await fetch(`${dbRootURL}master_siswa.json`, { method: 'PUT', body: JSON.stringify(filtered) });
                 render();
             }
@@ -277,25 +256,21 @@ studentBody.innerHTML = students.map(s => `
 
         function saveS() {
             localStorage.setItem('absensi_config', JSON.stringify({jamMasuk: document.getElementById('jam-m').value}));
-            alert('Pengaturan tersimpan!');
+            alert('Pengaturan jam tersimpan!');
         }
 
         function printRekap() {
             const content = document.getElementById('rekap-result').innerHTML;
             if (content.includes("Pilih kelas")) return alert("Tampilkan data terlebih dahulu!");
             const win = window.open('', '', 'height=700,width=900');
-            win.document.write('<html><head><title>Cetak Rekap</title><style>body{font-family:Arial;padding:30px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:10px;text-align:left}th{background:#f2f2f2}.status-ok{color:green}.status-late{color:red}</style></head><body>' + content + '</body></html>');
+            win.document.write('<html><head><title>Cetak Rekap</title><style>body{font-family:Arial;padding:30px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:10px;text-align:left}th{background:#f2f2f2}.status-ok{background:green;color:white;padding:3px 8px;border-radius:10px}.status-late{background:red;color:white;padding:3px 8px;border-radius:10px}</style></head><body>' + content + '</body></html>');
             win.document.close();
             setTimeout(() => { win.print(); win.close(); }, 500);
         }
 
-        // Jalankan render saat halaman dimuat
+        // Jalankan render awal
         document.getElementById('jam-m').value = getConfig().jamMasuk;
         render();
     </script>
 </body>
 </html>
-
-
-
-
