@@ -1,4 +1,4 @@
-// 1. PENGATURAN DATABASE (Arahkan ke Root agar bisa akses absensi dan master_siswa)
+// 1. PENGATURAN DATABASE
 const dbRootURL = "https://absen-sisingamangaraja-default-rtdb.asia-southeast1.firebasedatabase.app/";
 
 // 2. FUNGSI AMBIL DATA MASTER SISWA (ONLINE)
@@ -6,7 +6,6 @@ async function getStudents() {
     try {
         const res = await fetch(`${dbRootURL}master_siswa.json`);
         const data = await res.json();
-        // Firebase menyimpan sebagai object, kita ubah ke array
         return data ? Object.values(data) : [];
     } catch (e) {
         console.error("Gagal ambil data siswa online:", e);
@@ -26,24 +25,53 @@ async function getLogs() {
     }
 }
 
-// Pengaturan jam tetap lokal (sesuai konfigurasi admin di browser tersebut)
+// Pengaturan jam tetap lokal
 const getConfig = () => JSON.parse(localStorage.getItem('absensi_config') || '{"jamMasuk":"07:30"}');
 
-// 4. FUNGSI SIMPAN ABSENSI (ONLINE)
+// 4. FUNGSI IMPORT EXCEL (TAMBAHKAN INI AGAR TIDAK ERROR)
+async function importX(el) {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+            
+            const formatted = json.map(r => ({
+                id: String(r.ID || r.id || r.NIS || ""),
+                name: String(r.Nama || r.nama || ""),
+                kelas: String(r.Kelas || r.kelas || "-"),
+                wa: String(r.WA || "62")
+            })).filter(item => item.id !== "");
+
+            // Simpan ke Firebase folder master_siswa
+            await fetch(`${dbRootURL}master_siswa.json`, {
+                method: 'PUT',
+                body: JSON.stringify(formatted)
+            });
+
+            alert(`Berhasil upload ${formatted.length} data siswa ke Cloud!`);
+            location.reload(); 
+        } catch (error) {
+            console.error("Gagal Import:", error);
+            alert("Terjadi kesalahan saat mengunggah data.");
+        }
+    };
+    reader.readAsArrayBuffer(el.files[0]);
+}
+
+// 5. FUNGSI SIMPAN ABSENSI (ONLINE)
 async function saveAttendanceAuto(id) {
     const now = new Date();
     const timeStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
     const today = now.toLocaleDateString('id-ID');
-    
     const session = (now.getHours() < 12) ? "Masuk" : "Pulang";
     
-    // Ambil data siswa dari cloud (Async)
     const students = await getStudents();
     const student = students.find(s => s.id === id);
     
     if (!student) return { success: false, message: "TIDAK TERDAFTAR", studentData: {id, name: "Unknown", kelas: "-"} };
 
-    // Cek duplikasi di cloud
     const logs = await getLogs();
     const isDuplicate = logs.find(l => l.id === id && l.type === session && new Date(l.timestamp).toLocaleDateString('id-ID') === today);
 
@@ -61,13 +89,11 @@ async function saveAttendanceAuto(id) {
     };
     
     try {
-        // Simpan ke Firebase
         await fetch(`${dbRootURL}absensi.json`, {
             method: 'POST',
             body: JSON.stringify(entry)
         });
 
-        // Fitur Notifikasi WA
         if (student.wa && student.wa !== "-") {
             sendNotificationWA(student.name, status, student.wa);
         }
@@ -78,7 +104,7 @@ async function saveAttendanceAuto(id) {
     }
 }
 
-// 5. FUNGSI EXPORT & TEMPLATE
+// 6. FUNGSI EXPORT & TEMPLATE
 async function exportToExcel() {
     const data = await getLogs();
     if(data.length === 0) return alert("Data Kosong");
@@ -96,10 +122,9 @@ function downloadTemplateExcel() {
     XLSX.writeFile(wb, "Template_Import_Siswa.xlsx");
 }
 
-// 6. FUNGSI NOTIFIKASI WA (LOGIKA URL)
+// 7. FUNGSI NOTIFIKASI WA
 function sendNotificationWA(name, status, phone) {
     const msg = encodeURIComponent(`Info Absensi SMP Sisingamangaraja\nNama: *${name}*\nStatus: *${status}*`);
     const url = `https://wa.me/${phone}?text=${msg}`;
     console.log("Kirim WA ke: " + phone);
-    // window.open(url, '_blank'); // Aktifkan jika ingin otomatis buka tab WA
 }
