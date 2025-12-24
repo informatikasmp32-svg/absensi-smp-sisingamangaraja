@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Wali Kelas - SMP Sisingamangaraja</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="D:\DOKUMEN\logo87.PNG">
+</head>
+<body class="bg-admin">
+    <div class="container-admin">
+        <aside class="sidebar">
+            <h2 style="border:none; font-size:16px; text-align:center;">MENU WALI KELAS</h2>
+            <button onclick="location.reload()">🔄 Refresh Data</button>
+            <hr style="border: 0.5px solid #444; margin: 20px 0;">
+            <a href="login.html" style="background:#34495e; text-align:center; display:block; padding:10px; border-radius:5px; text-decoration:none; color:white;">Logout</a>
+        </aside>
+
+        <main class="content">
+            <section id="sec-rekap">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h2>Rekap Absensi Siswa</h2>
+                    <div style="display:flex; gap:10px;">
+                        <button onclick="kirimRekapKeWA()" style="background:#25d366; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">📱 Kirim Ke WA</button>
+                        <button onclick="printRekap()" style="background:#27ae60; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">🖨️ Cetak PDF</button>
+                    </div>
+                </div>
+
+                <div style="background:white; padding:15px; border-radius:8px; margin-bottom:20px; border:1px solid #ddd;">
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <label><b>Pilih Kelas Anda:</b></label>
+                            <select id="filter-kelas" onchange="renderRekap()" style="padding:10px; width:100%; margin-top:5px; border-radius:5px;">
+                                <option value="">-- Pilih Kelas --</option>
+                            </select>
+                        </div>
+                        <div style="flex: 1; min-width: 200px;">
+                            <label><b>Pilih Tanggal:</b></label>
+                            <input type="date" id="filter-tanggal" onchange="renderRekap()" style="padding:10px; width:100%; margin-top:5px; border-radius:5px; border: 1px solid #ccc; box-sizing: border-box;">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="rekap-result" style="background: white; padding: 20px; border-radius: 10px; border: 1px solid #ddd;">
+                    <p style="text-align:center; color:#888;">Silakan pilih kelas dan tanggal untuk melihat laporan.</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script-common.js"></script>
+    <script>
+        // Set default tanggal hari ini
+        document.getElementById('filter-tanggal').value = new Date().toISOString().split('T')[0];
+
+        function updateKelasDropdown() {
+            const students = getStudents();
+            const listKelas = [...new Set(students.map(s => s.kelas))].sort();
+            document.getElementById('filter-kelas').innerHTML = '<option value="">-- Pilih Kelas --</option>' + 
+                listKelas.map(k => `<option value="${k}">${k}</option>`).join('');
+        }
+
+        // FUNGSI RENDER REKAP (Disesuaikan untuk Async/Online)
+        async function renderRekap() {
+            const kelas = document.getElementById('filter-kelas').value;
+            const tglInput = document.getElementById('filter-tanggal').value;
+            
+            if (!kelas || !tglInput) return;
+            
+            const rekapResult = document.getElementById('rekap-result');
+            rekapResult.innerHTML = "<p style='text-align:center;'>Mengambil data dari server...</p>";
+
+            const selectedDate = new Date(tglInput).toLocaleDateString('id-ID');
+            const students = getStudents().filter(s => s.kelas === kelas);
+            
+            // MENUNGGU DATA DARI CLOUD (script-common.js)
+            const logs = await getLogs();
+
+            let html = `<h3>LAPORAN KEHADIRAN KELAS: ${kelas}</h3>`;
+            html += `<p>Tanggal: <b>${selectedDate}</b></p>`;
+            html += `<table border="1" style="width:100%; border-collapse:collapse; margin-top:10px;">
+                        <thead><tr style="background:#f2f2f2;"><th>Nama Siswa</th><th>Status</th><th>Jam Scan</th></tr></thead><tbody>`;
+
+            students.forEach(s => {
+                const log = logs.find(l => l.id === s.id && new Date(l.timestamp).toLocaleDateString('id-ID') === selectedDate);
+                const statusText = log ? log.mode : "Alpa / Belum Absen";
+                const jamText = log ? new Date(log.timestamp).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'}) : "-";
+                const color = log ? (log.mode === "Tepat Waktu" ? "green" : "orange") : "red";
+
+                html += `<tr>
+                            <td>${s.name}</td>
+                            <td style="text-align:center; color:${color}; font-weight:bold;">${statusText}</td>
+                            <td style="text-align:center;">${jamText}</td>
+                        </tr>`;
+            });
+            html += `</tbody></table>`;
+            rekapResult.innerHTML = html;
+        }
+
+        // FUNGSI KIRIM WA (Disesuaikan untuk Async/Online)
+        async function kirimRekapKeWA() {
+            const kelas = document.getElementById('filter-kelas').value;
+            const tglInput = document.getElementById('filter-tanggal').value;
+            if (!kelas) return alert("Pilih kelas terlebih dahulu!");
+            
+            const selectedDate = new Date(tglInput).toLocaleDateString('id-ID');
+            const students = getStudents().filter(s => s.kelas === kelas);
+            
+            // Tunggu data terbaru dari cloud
+            const logs = await getLogs();
+            
+            const alpa = students.filter(s => !logs.find(l => l.id === s.id && new Date(l.timestamp).toLocaleDateString('id-ID') === selectedDate));
+
+            let teks = `*LAPORAN KEHADIRAN SISWA*\n*SMP SISINGAMANGARAJA*\n\nKelas: ${kelas}\nTanggal: ${selectedDate}\n\n`;
+            
+            if (alpa.length === 0) {
+                teks += "✅ Semua siswa tercatat hadir.";
+            } else {
+                teks += `❌ *Daftar Tidak Hadir/Belum Absen (${alpa.length} Siswa):*\n`;
+                alpa.forEach((s, i) => {
+                    teks += `${i + 1}. ${s.name}\n`;
+                });
+            }
+
+            const url = `https://wa.me/?text=${encodeURIComponent(teks)}`;
+            window.open(url, '_blank');
+        }
+
+        function printRekap() {
+            const content = document.getElementById('rekap-result').innerHTML;
+            if (content.includes("pilih kelas")) return alert("Tampilkan data kelas terlebih dahulu!");
+            
+            const win = window.open('', '', 'height=700,width=900');
+            win.document.write('<html><head><title>Cetak Laporan Wali Kelas</title>');
+            win.document.write('<style>body{font-family:Arial; padding:30px} table{width:100%; border-collapse:collapse} th,td{border:1px solid #000; padding:8px; text-align:left} h3, p{text-align:center;}</style></head><body>');
+            win.document.write('<div style="text-align:center;"><h2>SMP SWASTA SISINGAMANGARAJA</h2><p>Laporan Kehadiran Harian</p><hr></div>');
+            win.document.write(content);
+            win.document.write('</body></html>');
+            win.document.close();
+            setTimeout(() => { win.print(); win.close(); }, 500);
+        }
+
+        window.onload = function() {
+            updateKelasDropdown();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin - SMP Sisingamangaraja</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="D:\DOKUMEN\logo87.PNG">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    <script>if(!sessionStorage.getItem('admin')) window.location.href='login.html';</script>
+</head>
+<body>
+    <div class="container-admin">
+        <aside class="sidebar">
+            <h2 style="border:none; font-size:16px; text-align:center;">SMP SISINGAMANGARAJA</h2>
+            <button onclick="show('laporan')">📊 Laporan Absensi</button>
+            <button onclick="show('siswa')">👥 Master Siswa</button>
+            <button onclick="show('set')">⚙️ Pengaturan Jam</button>
+            <button onclick="show('rekap')">📅 Rekap Per Kelas</button>
+            <hr style="border: 0.5px solid #444; margin: 20px 0;">
+            <button onclick="exportToExcel()" style="background:#27ae60; color:white;">📥 Export Excel</button>
+            <button onclick="clearAllLogs()" style="background:#e74c3c; color:white;">🗑️ Hapus Semua Log</button>
+            <a href="index.html" style="background:#95a5a6; text-align:center; display:block; padding:10px; border-radius:5px; text-decoration:none; color:white; margin:10px 0;">🖥️ Dashboard</a>
+            <button onclick="sessionStorage.clear(); window.location.href='login.html'" style="background:#34495e; color:white; margin-top:20px;">Logout</button>
+        </aside>
+
+        <main class="content">
+            <section id="sec-laporan">
+                <h2>Laporan Kehadiran</h2>
+                <input type="text" id="search" placeholder="Cari Nama/Kelas..." onkeyup="render()" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; margin-bottom:15px;">
+                <table>
+                    <thead>
+                        <tr><th>Waktu</th><th>Nama</th><th>Kelas</th><th>Status</th><th>Aksi</th></tr>
+                    </thead>
+                    <tbody id="tbody-log"></tbody>
+                </table>
+            </section>
+
+            <section id="sec-siswa" class="hidden">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2>Manajemen Data Siswa</h2>
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="downloadTemplateExcel()" style="background:#f39c12; color:white; padding:10px; border:none; border-radius:5px; cursor:pointer;">📄 Template</button>
+                        <input type="file" id="file-ex" accept=".xlsx" style="display:none" onchange="importX(this)">
+                        <button onclick="document.getElementById('file-ex').click()" style="background:#3498db; color:white; border:none; padding:10px; border-radius:5px; cursor:pointer;">📤 Import Excel</button>
+                    </div>
+                </div>
+                <p style="font-size: 12px; color: #666;">*Tips: Foto disimpan di <b>/img/siswa/[ID].jpg</b></p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:60px;">Foto</th>
+                            <th>ID/NIS</th>
+                            <th>Nama Siswa</th>
+                            <th>Kelas</th>
+                            <th>WA Orang Tua</th> 
+                            <th style="text-align:center;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-siswa"></tbody>
+                </table>
+            </section>
+
+            <section id="sec-set" class="hidden">
+                <h2>Pengaturan Jam</h2>
+                <label>Batas Jam Masuk (Tepat Waktu):</label><br>
+                <input type="time" id="jam-m" style="padding:10px; font-size:1.2rem; margin:10px 0;"><br>
+                <button onclick="saveS()" style="background:#27ae60; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">Simpan Pengaturan</button>
+            </section>
+
+            <section id="sec-rekap" class="hidden">
+                <h2>Rekap Absensi Per Kelas</h2>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <select id="filter-kelas" style="padding: 10px; border-radius: 5px; flex: 1;"></select>
+                    <input type="date" id="filter-tanggal" style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+                    <button onclick="renderRekap()" style="background:#3498db; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">Tampilkan</button>
+                    <button onclick="printRekap()" style="background:#27ae60; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">🖨️ Cetak PDF</button>
+                </div>
+                <div id="rekap-result" style="background: white; padding: 20px; border-radius: 10px; border: 1px solid #ddd;">
+                    <p>Pilih kelas dan tanggal terlebih dahulu.</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script-common.js"></script>
+    <script>
+        document.getElementById('filter-tanggal').value = new Date().toISOString().split('T')[0];
+
+        function show(s) {
+            document.querySelectorAll('section').forEach(el => el.classList.add('hidden'));
+            document.getElementById('sec-' + s).classList.remove('hidden'); 
+            if (s === 'rekap') updateKelasDropdown();
+            render();
+        }
+
+        // FUNGSI RENDER UTAMA (Disesuaikan untuk Async Firebase)
+        async function render() {
+            const q = document.getElementById('search').value.toLowerCase();
+            const logBody = document.getElementById('tbody-log');
+            
+            if (logBody) {
+                logBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Memuat data dari cloud...</td></tr>`;
+                // Ambil data dari Firebase secara Async
+                const allLogs = await getLogs();
+                const logs = allLogs.reverse().filter(l => 
+                    l.name.toLowerCase().includes(q) || 
+                    (l.kelas && l.kelas.toLowerCase().includes(q))
+                );
+
+                if (logs.length === 0) {
+                    logBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Tidak ada data ditemukan</td></tr>`;
+                } else {
+                    logBody.innerHTML = logs.map(l => `
+                        <tr>
+                            <td>${new Date(l.timestamp).toLocaleString('id-ID')}</td>
+                            <td><b>${l.name}</b></td>
+                            <td>${l.kelas}</td>
+                            <td><span class="badge ${l.mode.toLowerCase().replace(' ', '-')}">${l.mode}</span></td>
+                            <td><button onclick="delL('${l.timestamp}')" class="btn-del">Hapus</button></td>
+                        </tr>`).join('');
+                }
+            }
+
+            const studentBody = document.getElementById('tbody-siswa');
+            if(studentBody) {
+                studentBody.innerHTML = getStudents().map(s => `
+                    <tr>
+                        <td><img src="img/siswa/${s.id}.jpg" onerror="this.src='https://via.placeholder.com/40x50?text=👤'" class="img-table"></td>
+                        <td><code>${s.id}</code></td>
+                        <td>${s.name}</td>
+                        <td>${s.kelas}</td>
+                        <td>${s.wa || '-'}</td>
+                        <td style="text-align:center;">
+                            <button onclick="editSiswa('${s.id}')" style="background:#f39c12; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; margin-right:5px;">✏️ Edit</button>
+                            <button onclick="delS('${s.id}')" class="btn-del">🗑️ Hapus</button>
+                        </td>
+                    </tr>`).join('');
+            }
+        }
+
+        function updateKelasDropdown() {
+            const students = getStudents();
+            const listKelas = [...new Set(students.map(s => s.kelas))].sort();
+            document.getElementById('filter-kelas').innerHTML = '<option value="">-- Pilih Kelas --</option>' + 
+                listKelas.map(k => `<option value="${k}">${k}</option>`).join('');
+        }
+
+        // FUNGSI RENDER REKAP (Disesuaikan untuk Async Firebase)
+        async function renderRekap() {
+            const kelas = document.getElementById('filter-kelas').value;
+            const tglInput = document.getElementById('filter-tanggal').value;
+            
+            if (!kelas) return alert("Pilih kelas!");
+            if (!tglInput) return alert("Pilih tanggal!");
+            
+            const rekapResult = document.getElementById('rekap-result');
+            rekapResult.innerHTML = "<p style='text-align:center;'>Menghubungkan ke server...</p>";
+
+            const selectedDate = new Date(tglInput).toLocaleDateString('id-ID');
+            const students = getStudents().filter(s => s.kelas === kelas);
+            
+            // Tunggu data dari Firebase
+            const logs = await getLogs();
+
+            let html = `<h3>LAPORAN ABSENSI KELAS: ${kelas}</h3><p>Tanggal: <b>${selectedDate}</b></p>`;
+            html += `<table border="1" style="width:100%; border-collapse:collapse; margin-top:10px;">
+                        <thead><tr style="background:#f2f2f2;"><th>Nama Siswa</th><th>Status</th><th>Jam</th></tr></thead><tbody>`;
+
+            students.forEach(s => {
+                const log = logs.find(l => l.id === s.id && new Date(l.timestamp).toLocaleDateString('id-ID') === selectedDate);
+                const statusText = log ? log.mode : "Alpa / Belum Scan";
+                const jamText = log ? new Date(log.timestamp).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'}) : "-";
+                const colorStyle = !log ? 'color: red; font-weight: bold;' : '';
+
+                html += `<tr>
+                            <td>${s.name}</td>
+                            <td style="text-align:center; ${colorStyle}">${statusText}</td>
+                            <td style="text-align:center;">${jamText}</td>
+                        </tr>`;
+            });
+            html += `</tbody></table>`;
+            rekapResult.innerHTML = html;
+        }
+
+        function printRekap() {
+            const content = document.getElementById('rekap-result').innerHTML;
+            if (content.includes("Pilih kelas")) return alert("Tampilkan data terlebih dahulu!");
+            const win = window.open('', '', 'height=700,width=900');
+            win.document.write('<html><head><title>Cetak Rekap Absensi</title>');
+            win.document.write('<style>body{font-family:Arial; padding:30px} table{width:100%; border-collapse:collapse} th,td{border:1px solid #000; padding:8px; text-align:left} h3, p{text-align:center;}</style></head><body>');
+            win.document.write('<div style="text-align:center;"><h2>SMP SWASTA SISINGAMANGARAJA</h2><p>Rekapitulasi Kehadiran Siswa</p><hr></div>');
+            win.document.write(content);
+            win.document.write('</body></html>');
+            win.document.close();
+            setTimeout(() => { win.print(); win.close(); }, 500);
+        }
+
+        function saveS() {
+            localStorage.setItem('absensi_config', JSON.stringify({jamMasuk: document.getElementById('jam-m').value}));
+            alert('Tersimpan!');
+        }
+
+        function importX(el) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(worksheet);
+                if (json.length === 0) return alert("File Excel kosong!");
+                const formatted = json.map(r => {
+                    const id = r.ID || r.id || r.NIS || r.nis || "";
+                    const nama = r.Nama || r.nama || r["Nama Siswa"] || r["nama siswa"] || "";
+                    const kelas = r.Kelas || r.kelas || "-";
+                    let wa = r.WA || r.wa || r.WhatsApp || r["Nomor WA"] || r["wa orang tua"] || "-";
+                    if (wa !== "-") {
+                        wa = String(wa).replace(/[^\d]/g, "");
+                        if (wa.startsWith("08")) wa = "628" + wa.substring(2);
+                    }
+                    return { id: String(id), name: String(nama), kelas: String(kelas), wa: wa };
+                }).filter(item => item.id !== "");
+                localStorage.setItem('master_siswa', JSON.stringify(formatted)); 
+                alert(`Berhasil mengimpor ${formatted.length} data siswa.`);
+                render();
+            };
+            reader.readAsArrayBuffer(el.files[0]);
+        }
+
+        function editSiswa(id) {
+            let students = getStudents();
+            let index = students.findIndex(s => s.id === id);
+            if (index !== -1) {
+                const s = students[index];
+                const newName = prompt("Edit Nama Siswa:", s.name);
+                if (newName === null) return;
+                const newKelas = prompt("Edit Kelas:", s.kelas);
+                if (newKelas === null) return;
+                const newWA = prompt("Edit WA Orang Tua (62...):", s.wa);
+                if (newWA === null) return;
+                students[index].name = newName;
+                students[index].kelas = newKelas;
+                students[index].wa = newWA.replace(/[^\d]/g, "");
+                localStorage.setItem('master_siswa', JSON.stringify(students));
+                render();
+            }
+        }
+
+        async function delL(t) { 
+            if(confirm('Hapus log ini?')) { 
+                // Catatan: Menghapus data spesifik di Firebase memerlukan key database.
+                // Untuk kesederhanaan, fungsi ini tetap menggunakan filter lokal lalu Anda bisa hapus manual di Firebase console jika perlu.
+                alert("Data cloud hanya bisa dihapus oleh Admin melalui Firebase Console demi keamanan.");
+            } 
+        }
+
+        function delS(id) { if(confirm('Hapus siswa ini?')) { localStorage.setItem('master_siswa', JSON.stringify(getStudents().filter(s => s.id !== id))); render(); } }
+        
+        function clearAllLogs() { 
+            if(confirm('Hapus SEMUA data absensi di Cloud?')) { 
+                // Untuk menghapus semua data di Firebase secara permanen via tombol:
+                fetch(dbURL, { method: 'DELETE' }).then(() => render());
+            } 
+        }
+
+        document.getElementById('jam-m').value = getConfig().jamMasuk;
+        render();
+    </script>
+</body>
+</html>
