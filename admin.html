@@ -123,18 +123,19 @@
             if(studentBody) {
                 studentBody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Memuat data siswa...</td></tr>`;
                 const students = await getStudents();
-                studentBody.innerHTML = students.map(s => `
-                    <tr>
-                        <td><img src="img/siswa/${s.id}.jpg" onerror="this.src='https://via.placeholder.com/40x50?text=👤'" class="img-table"></td>
-                        <td><code>${s.id}</code></td>
-                        <td>${s.name}</td>
-                        <td>${s.kelas}</td>
-                        <td>${s.wa || '-'}</td>
-                        <td style="text-align:center;">
-                            <button onclick="editSiswa('${s.id}')" style="background:#f39c12; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; margin-right:5px;">✏️ Edit</button>
-                            <button onclick="delS('${s.id}')" class="btn-del">🗑️ Hapus</button>
-                        </td>
-                    </tr>`).join('');
+                // Ganti bagian map di dalam fungsi render() dengan ini:
+studentBody.innerHTML = students.map(s => `
+    <tr>
+        <td><img src="img/siswa/${s.id}.jpg" onerror="this.src='https://via.placeholder.com/45x55?text=👤'" class="img-table"></td>
+        <td><code>${s.id}</code></td>
+        <td><b>${s.name}</b></td>
+        <td>${s.kelas}</td>
+        <td>${s.wa || '-'}</td>
+        <td style="text-align:center;">
+            <button onclick="editSiswa('${s.id}')" class="btn-edit">✏️ Edit</button>
+            <button onclick="delS('${s.id}')" class="btn-del">🗑️ Hapus</button>
+        </td>
+    </tr>`).join('');
             }
         }
 
@@ -239,3 +240,4 @@
     </script>
 </body>
 </html>
+
