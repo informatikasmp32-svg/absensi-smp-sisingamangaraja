@@ -200,32 +200,31 @@
             alert('Tersimpan!');
         }
 
-        function importX(el) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
-                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                const json = XLSX.utils.sheet_to_json(worksheet);
-                if (json.length === 0) return alert("File Excel kosong!");
-                const formatted = json.map(r => {
-                    const id = r.ID || r.id || r.NIS || r.nis || "";
-                    const nama = r.Nama || r.nama || r["Nama Siswa"] || r["nama siswa"] || "";
-                    const kelas = r.Kelas || r.kelas || "-";
-                    let wa = r.WA || r.wa || r.WhatsApp || r["Nomor WA"] || r["wa orang tua"] || "-";
-                    if (wa !== "-") {
-                        wa = String(wa).replace(/[^\d]/g, "");
-                        if (wa.startsWith("08")) wa = "628" + wa.substring(2);
-                    }
-                    return { id: String(id), name: String(nama), kelas: String(kelas), wa: wa };
-                }).filter(item => item.id !== "");
-                localStorage.setItem('master_siswa', JSON.stringify(formatted)); 
-                alert(`Berhasil mengimpor ${formatted.length} data siswa.`);
-                render();
-            };
-            reader.readAsArrayBuffer(el.files[0]);
-        }
+       async function importX(el) {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, {type: 'array'});
+        const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+        
+        const formatted = json.map(r => ({
+            id: String(r.ID || r.id || r.NIS || ""),
+            name: String(r.Nama || r.nama || ""),
+            kelas: String(r.Kelas || r.kelas || "-"),
+            wa: String(r.WA || "62")
+        })).filter(item => item.id !== "");
 
+        // SIMPAN KE FIREBASE (Menimpa data lama)
+        await fetch("https://absen-sisingamangaraja-default-rtdb.asia-southeast1.firebasedatabase.app/master_siswa.json", {
+            method: 'PUT',
+            body: JSON.stringify(formatted)
+        });
+
+        alert(`Berhasil upload ${formatted.length} data siswa ke Cloud!`);
+        location.reload(); 
+    };
+    reader.readAsArrayBuffer(el.files[0]);
+}
         function editSiswa(id) {
             let students = getStudents();
             let index = students.findIndex(s => s.id === id);
@@ -266,4 +265,5 @@
         render();
     </script>
 </body>
+
 </html>
