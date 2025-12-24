@@ -125,8 +125,7 @@ if (logBody) {
             <td><button onclick="delL('${l.timestamp}')" class="btn-del">Hapus</button></td>
         </tr>`).join('');
 }
-
-            // 2. Render Master Siswa (Perbaikan Path Foto)
+           // 2. Render Master Siswa (Perbaikan Path Foto)
 // Render Master Siswa (Mendukung JPG, JPEG, dan PNG)
 const studentBody = document.getElementById('tbody-siswa');
 if(studentBody && !document.getElementById('sec-siswa').classList.contains('hidden')) {
@@ -296,6 +295,7 @@ studentBody.innerHTML = students.map(s => `
     </script>
 </body>
 </html>
+
 
 
 
